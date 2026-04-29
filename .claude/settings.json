@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": ["Edit(~/.npm/**)", "Read(~/.npm/**)"],
+    "deny": ["Bash(rm -rf *)", "Bash(sudo *)", "Bash(git push *)", "Bash(git reset --hard *)"]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowLocalBinding": true,
+      "allowedDomains": ["registry.npmjs.org", "*.npmjs.org", "*.github.com", "github.com", "*.githubusercontent.com", "*.supabase.co"]
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-files.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/auto-format.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/compact-reminder.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
