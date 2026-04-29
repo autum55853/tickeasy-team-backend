@@ -2,7 +2,7 @@
 
 ## 專案概述
 
-Tickeasy Team Backend — TypeScript + Express 4.x REST API，PostgreSQL (Supabase)，TypeORM，JWT + Google OAuth 認證，ECPay 金流，AWS S3 / Supabase Storage 圖片儲存。
+Tickeasy Team Backend — TypeScript + Express 4.x REST API，PostgreSQL (Supabase)，TypeORM，JWT + Google OAuth 認證，ECPay 金流，Supabase Storage 圖片儲存。
 
 ## 常用指令
 
