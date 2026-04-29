@@ -10,7 +10,7 @@
     "build": "tsc",
     "typeorm": "typeorm-ts-node-commonjs",
     "migrate": "npm run typeorm migration:run -- -d config/database.ts",
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --config jest.config.cjs",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix"
   },
