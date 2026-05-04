@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: tickeasy-backend
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: npm ci && npm run build
+    preDeployCommand: npm run migrate
+    startCommand: node dist/bin/server.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_EXPIRES_DAY
+        value: 7d
+      - key: CLEANUP_TEMP_IMAGES_HOURS
+        value: 24
+      - key: CLEANUP_INTERVAL_HOURS
+        value: 6
+      - key: JWT_SECRET
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_URL
+        sync: false
+      - key: DB_ANON_KEY
+        sync: false
+      - key: EMAILER_USER
+        sync: false
+      - key: EMAILER_OAUTH_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: MERCHANTID
+        sync: false
+      - key: HASHKEY
+        sync: false
+      - key: HASHIV
+        sync: false
+      - key: HOST
+        sync: false
+      - key: REDIRECTURL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
