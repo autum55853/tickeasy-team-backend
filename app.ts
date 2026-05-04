@@ -57,6 +57,10 @@ app.use(cookieParser());
 
 
 // 路由設置
+app.get('/api/v1/health', (_req: Request, res: Response) => {
+  res.json({ status: 'success', message: 'OK' });
+});
+
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/organizations', organizationRouter);
