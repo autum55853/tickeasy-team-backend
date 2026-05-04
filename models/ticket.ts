@@ -1,10 +1,10 @@
 /**
  * 票券模型
  */
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
   ManyToOne,
   JoinColumn,
   // CreateDateColumn
@@ -33,40 +33,42 @@ export class Ticket {
   @Column({ name: 'ticketTypeId', type: 'uuid', nullable: false })
   ticketTypeId: string;
 
-  @ManyToOne(() => TicketType, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => TicketType, (ticketType) => ticketType.tickets, {
+    nullable: false,
+    onDelete: 'RESTRICT', // 刪除票券時不刪除票種
+  })
   @JoinColumn({ name: 'ticketTypeId' })
   ticketType: TicketType;
 
   @Column({ name: 'userId', type: 'uuid', nullable: false })
   userId: string;
 
-  // 使用字串表示類型而非直接引用，解決循環依賴
   @ManyToOne('User', { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId' })
   user: any; // 或者可以使用 Record<string, any> 類型
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  purchaserName: string;
+  purchaserName: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  purchaserEmail: string;
+  purchaserEmail: string | null;
 
   @Column({ type: 'timestamp', nullable: false })
   concertStartTime: Date;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  seatNumber: string;
+  seatNumber: string | null;
 
   @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
-  qrCode: string;
+  qrCode: string | null;
 
   @Column({
     type: 'enum',
     enum: ['purchased', 'refunded', 'used'] as TicketStatus[],
-    nullable: false
+    nullable: false,
   })
   status: TicketStatus;
 
   @Column({ type: 'timestamp', name: 'purchaseTime', nullable: false })
   purchaseTime: Date;
-} 
+}

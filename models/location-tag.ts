@@ -1,12 +1,7 @@
 /**
  * 地區標籤模型
  */
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  OneToMany
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Concert } from './concert.js';
 
 @Entity('locationTag')
@@ -16,7 +11,10 @@ export class LocationTag {
 
   @Column({ type: 'varchar', length: 50, nullable: false })
   locationTagName: string;
-  
-  @OneToMany(() => Concert, concert => concert.locationTag)
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  subLabel: string;
+
+  @OneToMany(() => Concert, (concert) => concert.locationTag)
   concerts: Concert[];
-} 
+}

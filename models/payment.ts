@@ -52,17 +52,21 @@ export class Payment {
   currency: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  paidAt: Date;
+  paidAt: Date | null;
 
-  @Column({ type: 'uuid', unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   transactionId: string;
 
   @Column({ type: 'jsonb', nullable: true })
   rawPayload: object;
-
+  
   @CreateDateColumn({ nullable: false })
   createdAt: Date;
 
   @UpdateDateColumn({ nullable: true })
   updatedAt?: Date;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  tradeNo: string;
+
 } 

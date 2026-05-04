@@ -68,6 +68,16 @@ export class ApiError {
     return this.create(403, '您沒有權限執行此操作', ErrorCode.AUTH_FORBIDDEN);
   }
 
+  // 信箱未驗證錯誤
+  static emailNotVerified() {
+    return this.create(403, '請先完成信箱驗證', ErrorCode.AUTH_EMAIL_NOT_VERIFIED);
+  }
+
+  // 舊密碼錯誤
+  static invalidOldPassword() {
+    return this.create(400, '舊密碼不正確', ErrorCode.AUTH_INVALID_OLD_PASSWORD);
+  }
+
   // 數據驗證錯誤
   static invalidEmailFormat() {
     return this.create(400, 'Email 格式不正確', ErrorCode.VALIDATION_EMAIL_FORMAT);
@@ -124,7 +134,20 @@ export class ApiError {
   static badRequest(fieldName: string) {
     return this.create(400, `${fieldName} 僅能編輯草稿中的演唱會`, ErrorCode.DATA_INVALID);
   }
+  
+  // 不是販售時間
+  static outOfTimeRange(fieldName: string) {
+    return this.create(400, `${fieldName} 目前非販售時間`, ErrorCode.DATA_INVALID);
+  }
+  
+  // 訂單已過期
+  static orderExpired(fieldName: string) {
+    return this.create(400, `${fieldName} 訂單已過期`, ErrorCode.DATA_INVALID);
+  }
 
-
+  // 關聯約束違反（外鍵）
+  static dataConstraintViolation(message = '資料仍被其他實體關聯，無法刪除') {
+    return this.create(400, message, ErrorCode.DATA_CONSTRAINT_VIOLATION);
+  }
 
 } 

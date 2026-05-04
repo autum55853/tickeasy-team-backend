@@ -17,4 +17,12 @@ export interface UpdateProfileRequest {
   country?: string;
   preferredRegions?: string[];
   preferredEventTypes?: string[];
+}
+
+/**
+ * 更新使用者角色請求
+ */
+export interface UpdateUserRoleRequest {
+  /** 目標角色，可為 user、admin、superuser */
+  role: 'user' | 'admin' | 'superuser';
 } 

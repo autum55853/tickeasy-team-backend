@@ -10,6 +10,8 @@ import {
   googleLogin
 } from '../controllers/auth.js';
 import passport from '../config/passport.js';
+import { isAuthenticated } from '../middlewares/auth.js';
+import { changePassword } from '../controllers/auth.js';
 
 const router: Router = express.Router();
 
@@ -64,5 +66,8 @@ router.get('/google/callback',
   }), 
   googleLogin // Passport 驗證成功後執行此控制器
 );
+
+// 已登入用戶變更密碼
+router.post('/change-password', isAuthenticated, changePassword);
 
 export default router; 

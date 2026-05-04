@@ -1,32 +1,33 @@
-FROM node:18-alpine 
+FROM node:18-alpine
 
 WORKDIR /app
 
-# 先複製 package.json 和 package-lock.json
+# 複製 package.json 和 lock 檔
 COPY package*.json ./
 
-# 安裝所有依賴 (包括 devDependencies 以便編譯)
-# 移除 --ignore-scripts 允許 bcrypt 等原生插件的 postinstall 腳本運行
+# 安裝所有依賴（含 devDependencies）
 RUN npm install
 
-# 安裝 TypeScript 並全局安裝 (注意：全局安裝不是最佳實踐，但遵循您之前的修改)
+# 全域安裝 TypeScript（非必要，可考慮移除）
 RUN npm install -g typescript
 
-# 複製 tsconfig.json
+# 複製 tsconfig
 COPY tsconfig.json ./
 
-# 複製所有源代碼
+# 複製所有原始碼
 COPY . .
 
-# 使用全局安裝的 tsc 進行編譯
+# 編譯 TypeScript
 RUN tsc --skipLibCheck
 
-# 暴露端口
+# ✅ 關鍵：編譯完後把 views 也複製進 dist
+RUN cp -r views dist/views
+
+# 開放 port 3000
 EXPOSE 3000
 
-# 在這裡設置運行時環境變數
+# 設定環境變數
 ENV NODE_ENV=production
-# ENV PORT=3000 # PORT 通常由 Render 自動設置或在 CMD 中處理，可以不寫死
 
-# 啟動應用
+# 啟動服務
 CMD ["node", "dist/bin/server.js"]

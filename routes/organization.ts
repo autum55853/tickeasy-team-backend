@@ -1,6 +1,7 @@
 import express from 'express';
 import * as organizationController from '../controllers/organization.js';
 import { isAuthenticated } from '../middlewares/auth.js';
+import { requireVerifiedEmail } from '../middlewares/auth.js';
 // import { authenticateToken } from '../middleware/auth'; // 之後會用到
 
 const router = express.Router();
@@ -15,7 +16,7 @@ router.get('/:organizationId', isAuthenticated, organizationController.getOrgani
 router.get('/:organizationId/concerts', isAuthenticated, organizationController.getConcertsByOrganization);
 
 // 創建組織 (需要登入)
-router.post('/', isAuthenticated, /* authenticateToken?, */ organizationController.createOrganization);
+router.post('/', isAuthenticated, requireVerifiedEmail, /* authenticateToken?, */ organizationController.createOrganization);
 
 // 更新組織 (需要登入和權限)
 // TODO: 加入權限檢查 (isOwner or isAdmin)

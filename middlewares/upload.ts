@@ -27,7 +27,9 @@ export const uploadMiddleware = multer({
     fileSize: MAX_FILE_SIZE
   },
   fileFilter
-});
+}).fields([
+  { name: 'file', maxCount: 1 }
+]);
 
 // 處理 multer 錯誤
 export const handleMulterError = (err: any, req: Request, res: Response, next: Function) => {

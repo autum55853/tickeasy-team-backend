@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>導向至綠界付款頁面...</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding-top: 80px;
+      background-color: #f7f7f7;
+      color: #333;
+    }
+    .loader {
+      margin: 20px auto;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #00a0e9;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h2>正在為您準備綠界付款頁面...</h2>
+  <div class="loader"></div>
+  <p>若未自動跳轉，請稍候或刷新頁面。</p>
+
+  <%- html %>
+</body>
+</html>

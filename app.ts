@@ -15,12 +15,25 @@ import { connectToDatabase } from './config/database.js';
 // 確保模型初始化
 import './models/index.js';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+
 // 引入路由
 import authRouter from './routes/auth.js';
 import userRouter from './routes/user.js';
 import organizationRouter from './routes/organization.js';
 import uploadRouter from './routes/upload.js';
 import concertRoute from './routes/concert.js';
+import ticketRoute from './routes/ticket.js';
+import ordersRoute from './routes/orders.js';
+import paymentRoute from './routes/payment.js';
+import sessionRoute from './routes/session.js';
+import knowledgeBaseRoute from './routes/knowledge-base.js';
+import smartReplyRoute from './routes/smart-reply.js';
+
+
+import healthRouter from './routes/health.js';
 
 const app = express();
 
@@ -34,6 +47,15 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('未處理的 Promise 拒絕:', promise, '原因:', reason);
 });
+
+// ESM friendly __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 設定 View 引擎
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
 
 connectToDatabase()
   .then(() => console.log('資料庫連接成功'))
@@ -49,7 +71,60 @@ connectToDatabase()
 
 // 中間件設置
 app.use(helmet());
-app.use(cors());
+
+// CORS 配置
+const corsOptions = {
+  // eslint-disable-next-line no-unused-vars
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // 允許的來源
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',  // Vite 開發服務器
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:5173',
+      'https://tickeasy-dashboard.onrender.com',
+      'https://frontend-fz4o.onrender.com',
+      'https://frontend-amber.onrender.com',
+      'https://tickeasy-frontend.onrender.com',
+      'https://tickeasy-f.onrender.com'
+    ];
+    
+    // 從 FRONTEND_URL 環境變數中提取前端域名（去掉 /callback）
+    if (process.env.FRONTEND_URL) {
+      const frontendUrl = process.env.FRONTEND_URL.replace('/callback', '');
+      allowedOrigins.push(frontendUrl);
+    }
+    
+    // 開發環境允許沒有 origin 的請求（例如 Postman、移動應用）
+    if (process.env.NODE_ENV === 'development' && !origin) {
+      return callback(null, true);
+    }
+    
+    
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error(`來源 ${origin} 不被 CORS 政策允許`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control',
+    'X-HTTP-Method-Override',
+    'Access-Control-Allow-Headers'
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200 // 支援舊版 IE
+};
+
+app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -66,6 +141,14 @@ app.use('/api/v1/users', userRouter);
 app.use('/api/v1/organizations', organizationRouter);
 app.use('/api/v1/upload', uploadRouter);
 app.use('/api/v1/concerts', concertRoute);
+app.use('/api/v1/ticket', ticketRoute);
+app.use('/api/v1/orders', ordersRoute);
+app.use('/api/v1/payments', paymentRoute);
+app.use('/api/v1/sessions', sessionRoute);
+app.use('/api/v1/knowledge-base', knowledgeBaseRoute);
+app.use('/api/v1/smart-reply', smartReplyRoute);
+
+app.use('/api/v1/health', healthRouter);
 
 
 // 註冊錯誤處理中間件

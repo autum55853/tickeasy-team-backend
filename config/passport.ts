@@ -1,28 +1,11 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-google-oauth20';
 import { AppDataSource } from './database.js';
-import { User, UserRole, OAuthProvider, Gender } from '../models/user.js';
+import { User, UserRole } from '../models/user.js';
+import { UserData } from '../types/auth/responses.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-
-// 擴展 GoogleUser 類型以匹配代碼中實際返回的用戶數據結構
-interface GoogleUser {
-  user: {
-    userId: string;
-    email: string;
-    name: string;
-    avatar?: string;
-    role: UserRole;
-    oauthProviders: OAuthProvider[];
-    phone?: string;
-    address?: string;
-    birthday?: Date | null;
-    gender?: Gender | null;
-    isEmailVerified: boolean;
-    [key: string]: any;
-  }
-}
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID!,
@@ -105,47 +88,58 @@ passport.use(new GoogleStrategy({
         user = await userRepository.save(newUser);
       }
 
-      // 準備傳遞給 Controller 的用戶資料結構，需與 Controller 中預期的一致
-      const userData: GoogleUser = {
-        user: {
-          userId: user.userId, // 使用 userId 而非 id
-          email: user.email,
-          name: user.name, // 確保 name 被包含
-          avatar: user.avatar,
-          role: user.role,
-          oauthProviders: user.oauthProviders,
-          phone: user.phone,
-          address: user.address,
-          birthday: user.birthday,
-          gender: user.gender,
-          isEmailVerified: user.isEmailVerified
-          // ... 其他需要的 user 欄位
-        }
+      // 準備傳遞給 Controller 的用戶資料結構
+      const userData: UserData = {
+        userId: user.userId,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        role: user.role,
+        oauthProviders: user.oauthProviders,
+        phone: user.phone,
+        address: user.address,
+        birthday: user.birthday,
+        gender: user.gender,
+        isEmailVerified: user.isEmailVerified
       };
 
-      return done(null, userData as any); // 使用類型斷言來解決類型不匹配問題
+      return done(null, userData);
     } catch (err) {
-      console.error('Error in Google Strategy verify callback:', err); // 添加日誌記錄
+      console.error('Error in Google Strategy verify callback:', err);
       return done(err);
     }
   })
 );
 
-// 可選：序列化和反序列化用戶 (如果使用 session)
-// passport.serializeUser((user: any, done) => {
-//   done(null, user.user.userId); // 使用 userId 而非 id
-// });
+passport.serializeUser((user: any, done) => {
+  done(null, user.userId);
+});
 
-// passport.deserializeUser(async (id: string, done) => {
-//   try {
-//     const userRepository = AppDataSource.getRepository(User);
-//     const user = await userRepository.findOne({ where: { userId: id } });
-//     // 準備反序列化後的用戶資料結構，可能需要調整以匹配應用需求
-//     const userData = user ? { user: { userId: user.userId, email: user.email, role: user.role /* ...其他欄位 */ } } : null;
-//     done(null, userData);
-//   } catch (err) {
-//     done(err);
-//   }
-// });
+passport.deserializeUser(async (id: string, done) => {
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id });
+    if (user) {
+      const userData: UserData = {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        oauthProviders: user.oauthProviders,
+        avatar: user.avatar,
+        phone: user.phone,
+        address: user.address,
+        birthday: user.birthday,
+        gender: user.gender
+      };
+      done(null, userData);
+    } else {
+      done(new Error('找不到用戶'), null);
+    }
+  } catch (error) {
+    done(error, null);
+  }
+});
 
 export default passport; 

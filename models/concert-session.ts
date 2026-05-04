@@ -1,19 +1,19 @@
 /**
  * 音樂會場次模型
  */
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
   CreateDateColumn,
   ManyToOne,
-  JoinColumn
+  JoinColumn,
+  OneToMany,
 } from 'typeorm';
+import { TicketType } from './ticket-type.js';
+import { Concert } from './concert.js';
 
-// 避免直接導入 Concert 類型，使用接口代替
-interface ConcertRef {
-  concertId: string;
-}
+// export type SessionStatus = 'draft' | 'published' | 'finished';
 
 @Entity('concertSession')
 export class ConcertSession {
@@ -23,22 +23,33 @@ export class ConcertSession {
   @Column({ name: 'concertId', type: 'uuid', nullable: false })
   concertId: string;
 
-  @ManyToOne('Concert', 'sessions', { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => Concert, (concert) => concert.sessions, {
+    nullable: false,
+    onDelete: 'CASCADE', // 刪除音樂會時也刪掉場次
+  })
   @JoinColumn({ name: 'concertId' })
-  concert: ConcertRef;
+  concert: Concert;
 
-  @Column({ type: 'date' })
-  sessionDate: Date;
+  @OneToMany(() => TicketType, (ticketType) => ticketType.concertSession, {
+    cascade: true, // 建立 session 時可同時建立 ticketTypes
+  })
+  ticketTypes: TicketType[];
 
-  @Column({ type: 'time' })
-  sessionStart: string;
+  @Column({ type: 'date', nullable: true })
+  sessionDate: Date; // yyyy-mm-dd
 
   @Column({ type: 'time', nullable: true })
-  sessionEnd: string;
+  sessionStart: string; // HH:mm
+
+  @Column({ type: 'time', nullable: true })
+  sessionEnd: string; // HH:mm
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   sessionTitle: string;
 
+  @Column({ type: 'text', nullable: true })
+  imgSeattable: string; // 只會有一張
+
   @CreateDateColumn()
   createdAt: Date;
-} 
+}

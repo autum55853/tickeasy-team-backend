@@ -97,4 +97,8 @@ export class Order {
   
   @OneToMany('Payment', 'order')
   payments: Payment[];
+
+  @Column({ name: 'orderNumber', type: 'varchar', length: 32, unique: true })
+  orderNumber: string;
+
 } 

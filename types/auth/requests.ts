@@ -43,6 +43,12 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+// 已登入用戶變更密碼請求
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
 // Google 登入請求的用戶格式
 export interface GoogleUserData {
   userId: string;
