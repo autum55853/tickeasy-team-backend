@@ -1,169 +1,244 @@
 # Tickeasy 後端專案
 
-這是一個使用 Express.js 和 TypeScript 構建的票務系統後端應用程式，提供一套完整的 API 服務，用於管理音樂會或活動的門票銷售與管理。
+演唱會票務系統後端 API 服務，使用 TypeScript + Express 4.x 構建，提供會員認證、演唱會管理、訂單與金流等完整功能。
 
-## 功能特點
+## 功能總覽
 
-- 用戶身份認證（本地和 Google OAuth 登入）
-- 電子郵件驗證
-- 帳號管理功能
-- RESTful API 設計
-- PostgreSQL 資料庫存儲
-- TypeORM 物件關聯映射
-- 安全性設計（Helmet 防護）
-- API 參數驗證
+| 模組 | 功能 | 狀態 |
+|------|------|------|
+| 認證 | Email 註冊 / 登入、Email 驗證（6位數驗證碼）、密碼重置 | ✅ 完成 |
+| 認證 | Google OAuth 2.0 登入 | ✅ 完成 |
+| 用戶 | 個人資料查詢 / 更新、地區 / 活動類型選項 | ✅ 完成 |
+| 組織 | 組織 CRUD、取得組織演唱會列表 | ✅ 完成 |
+| 演唱會 | 建立 / 更新（草稿模式）、多票種管理 | ✅ 完成 |
+| 演唱會 | 搜尋 / 篩選 / 分頁、熱門演唱會、首頁 Banner | ✅ 完成 |
+| 演唱會 | visitCount 計數、promotion 權重管理（Admin） | ✅ 完成 |
+| 圖片 | Multer + Sharp 上傳、Supabase Storage 儲存、暫存清理 | ✅ 完成 |
+| 訂單 | 訂單流程 | 🔧 進行中 |
+| 金流 | ECPay 綠界支付 | 🔧 進行中 |
 
 ## 技術棧
 
-- **Node.js** + **Express**: 網頁應用框架
-- **TypeScript**: 強型別的 JavaScript 超集
-- **PostgreSQL**: 關聯式資料庫
-- **TypeORM**: 物件關聯映射庫
-- **JWT**: 使用者驗證
-- **Passport.js**: 第三方身份驗證
-- **Jest**: 單元測試框架
+| 類別 | 技術 |
+|------|------|
+| 語言 | TypeScript（ESM modules） |
+| 框架 | Express 4.x |
+| ORM | TypeORM 0.3.x（migrations，`synchronize: false`） |
+| 資料庫 | PostgreSQL（Supabase 雲端） |
+| 認證 | JWT + Passport.js（Google OAuth 2.0） |
+| 圖片儲存 | Multer + Sharp + Supabase Storage |
+| 郵件 | Nodemailer（Gmail + Google OAuth2） |
+| 金流 | 綠界 ECPay |
+| 測試 | Jest + Supertest |
+| Lint | ESLint + TypeScript-ESLint |
+| 安全 | Helmet、bcrypt（rounds=12）、CORS |
+| 部署 | Render.com（`render.yaml`） |
 
-## 安裝與設定
+## 快速開始
 
 ### 先決條件
 
-- Node.js (v14+)
-- npm 或 yarn
-- Docker 和 Docker Compose (推薦用於開發和部署)
-- Supabase 帳號 (用於資料庫)
+- Node.js v18+
+- npm
+- Supabase 帳號（資料庫 + Storage）
+- Google Cloud 帳號（OAuth 2.0 + Gmail API）
 
 ### 安裝步驟
 
-1. 複製專案
+```bash
+# 1. 複製專案
+git clone <repository-url>
+cd tickeasy-team-backend
 
-   ```bash
-   git clone <repository-url>
-   cd tickeasy-backend
-   ```
+# 2. 安裝相依套件
+npm install
 
-2. 安裝相依套件
+# 3. 設定環境變數
+cp .env.example .env
+# 填入各服務的金鑰（詳見下方環境變數說明）
 
-   ```bash
-   npm install
-   ```
+# 4. 執行資料庫 migration
+npm run migrate
 
-3. 環境變數設定
-   建立 `.env` 檔案於專案根目錄，並根據您的 Supabase 和 Google OAuth 設定填寫以下變數：
+# 5. 啟動開發伺服器
+npm run dev
+```
 
-   ```dotenv
-   PORT=3000
-   NODE_ENV=development
+伺服器預設啟動於 `http://localhost:3000`，API 根路徑為 `/api/v1/`。
 
-   # Supabase 資料庫連接資訊
-   DB_HOST=aws-0-ap-northeast-1.pooler.supabase.com # 您的 Supabase 主機
-   DB_PORT=5432
-   DB_USERNAME=postgres # 您的 Supabase 用戶名
-   DB_PASSWORD=your_supabase_password # 您的 Supabase 密碼
-   DB_DATABASE=postgres # 您的 Supabase 資料庫名
+## 環境變數
 
-   # JWT 設定
-   JWT_SECRET=your_jwt_secret
-   JWT_EXPIRES_IN=7d
+複製 `.env.example` 並填入以下設定：
 
-   # Email 設定 (根據您的郵件服務商提供)
-   EMAIL_HOST=smtp.example.com
-   EMAIL_PORT=587
-   EMAIL_USER=your_email
-   EMAIL_PASS=your_email_password
+```dotenv
+PORT=3000
+NODE_ENV=development
 
-   # Google OAuth
-   GOOGLE_CLIENT_ID=your_google_client_id
-   GOOGLE_CLIENT_SECRET=your_google_client_secret
-   GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback # 開發時回調 URL
+# Supabase 資料庫
+DB_HOST=         # Supabase DB 主機位址
+DB_PORT=5432
+DB_USER=         # 資料庫使用者名稱
+DB_PASSWORD=     # 資料庫密碼
+DB_NAME=postgres
 
-   # 前端 URL (用於 Google 登入成功/失敗跳轉)
-   FRONTEND_URL=http://localhost:3010 # 您的前端應用程式 URL
-   FRONTEND_LOGIN_FAIL_URL=http://localhost:3010/login/failed # 登入失敗跳轉 URL
-   ```
+# Supabase Storage
+DB_URL=          # Supabase project URL
+DB_ANON_KEY=     # Supabase anon key
 
-4. 執行資料庫遷移 (連接到 Supabase)
-   確保 `.env` 設定正確後，執行：
-   ```bash
-   npm run migrate
-   ```
-   _注意：首次運行或模型有變更時才需要執行遷移。_
+# JWT
+JWT_SECRET=      # 自訂安全密鑰（必填，否則無法啟動）
+JWT_EXPIRES_DAY=7d
 
-## 啟動應用程式 (開發模式)
+# Email（Gmail + Google OAuth2）
+EMAILER_USER=            # Gmail 帳號
+EMAILER_OAUTH_REFRESH_TOKEN=  # Google OAuth2 refresh token
 
-有兩種主要的開發方式：
+# Google OAuth 登入
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback
+FRONTEND_URL=http://localhost:3010  # 登入成功後重定向的前端網址
 
-### 方式一：使用 Docker Compose (推薦)
+# 綠界 ECPay 金流
+MERCHANTID=
+HASHKEY=
+HASHIV=
+HOST=            # ECPay API 主機
+REDIRECTURL=     # 付款完成重定向 URL
 
-此方式使用 Docker 容器運行後端應用程式，但連接到您在 `.env` 中設定的外部 Supabase 資料庫。
+# 暫存圖片清理
+CLEANUP_TEMP_IMAGES_HOURS=24  # 清理多少小時前的暫存圖片
+CLEANUP_INTERVAL_HOURS=6      # 每隔多少小時執行一次清理
 
-1.  **確保 Docker Desktop 正在運行。**
-2.  在專案根目錄執行：
-    ```bash
-    docker-compose up --build
-    ```
-    - `--build`：首次運行或修改 `Dockerfile` 後需要加上此參數。
-    - 此命令會建立 Docker 映像、啟動容器，並使用 `nodemon` 監控程式碼變更以實現熱重載。
-    - 應用程式將在 `http://localhost:3000` 上運行。
+# OpenAI（管理後台用）
+OPENAI_API_KEY=
+```
 
-### 方式二：在本機直接運行
+## 常用指令
 
-此方式直接使用您本地安裝的 Node.js 環境運行。
+| 指令 | 說明 |
+|------|------|
+| `npm run dev` | 開發模式（tsx watch，自動重啟） |
+| `npm run build` | TypeScript 編譯至 `dist/` |
+| `npm run start` | 啟動 production（需先 build） |
+| `npm run migrate` | 執行資料庫 migration |
+| `npm run test` | 執行 Jest 測試 |
+| `npm run lint` | ESLint 靜態分析 |
+| `npm run lint:fix` | ESLint 自動修正 |
 
-1.  確保已安裝所有相依套件 (`npm install`)。
-2.  確保 `.env` 檔案已正確設定。
-3.  在專案根目錄執行：
-    ```bash
-    npm run dev
-    ```
-    - 此命令同樣使用 `nodemon` 實現熱重載。
-    - 應用程式將在 `http://localhost:3000` 上運行。
+## API 路由總覽
 
-## 使用 Docker 部署 (生產模式)
+所有路由前綴為 `/api/v1/`。
 
-對於生產環境部署，您可以直接使用 `Dockerfile` 建立最佳化的映像。
+### 認證 `/auth`
 
-1.  建立生產環境用的 `.env.production` 檔案 (或使用其他環境變數管理方式)。
-2.  建立 Docker 映像：
-    ```bash
-    docker build -t tickeasy-backend:latest .
-    ```
-3.  運行容器 (替換 `--env-file` 或使用其他方式注入生產環境變數):
-    ```bash
-    docker run -d -p 8080:3000 --env-file .env.production --name tickeasy-app tickeasy-backend:latest
-    ```
-    - `-d`: 在背景運行容器。
-    - `-p 8080:3000`: 將主機的 8080 端口映射到容器的 3000 端口 (可依需求調整主機端口)。
-    - `--name tickeasy-app`: 為容器命名。
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| POST | `/register` | 註冊（回傳 JWT + 發驗證信） |
+| POST | `/login` | 登入（回傳 JWT） |
+| POST | `/verify-email` | 驗證 Email（6 位數驗證碼） |
+| POST | `/resend-verification` | 重新發送驗證碼（10 分鐘冷卻） |
+| POST | `/request-password-reset` | 申請密碼重置 |
+| POST | `/reset-password` | 重置密碼 |
+| GET | `/google` | 跳轉至 Google OAuth |
+| GET | `/google/callback` | Google OAuth callback |
+
+### 演唱會 `/concerts`
+
+| 方法 | 路徑 | 認證 | 說明 |
+|------|------|------|------|
+| POST | `/` | 需要 | 建立演唱會（支援草稿） |
+| PUT | `/:concertId` | 需要 | 更新演唱會（限草稿狀態） |
+| GET | `/search` | — | 搜尋演唱會（篩選、分頁、排序） |
+| GET | `/popular` | — | 熱門演唱會 |
+| GET | `/banners` | — | 首頁 Banner（前 5 筆） |
+| GET | `/venues` | — | 所有場地資料 |
+| PATCH | `/:concertId/visit` | — | 增加瀏覽次數 |
+| PATCH | `/:concertId/promotion` | Admin | 設定 promotion 權重 |
+
+### 用戶 `/users`
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/profile` | 取得個人資料 |
+| PUT | `/profile` | 更新個人資料 |
+| GET | `/profile/regions` | 地區選項清單 |
+| GET | `/profile/event-types` | 活動類型選項清單 |
+
+### 組織 `/organizations`
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/` | 取得當前用戶的組織列表 |
+| POST | `/` | 建立組織 |
+| GET | `/:organizationId` | 取得單一組織 |
+| PUT | `/:organizationId` | 更新組織 |
+| DELETE | `/:organizationId` | 刪除組織 |
+| GET | `/:organizationId/concerts` | 組織的演唱會列表 |
+
+### 統一回應格式
+
+```json
+// 成功
+{ "status": "success", "message": "說明", "data": {} }
+
+// 失敗
+{ "status": "failed", "message": "錯誤說明", "code": "A06" }
+```
 
 ## 專案結構
 
 ```
 tickeasy-team-backend/
-├── bin/                  # 應用程式入口點
-├── config/               # 設定檔案
-├── controllers/          # 業務邏輯控制器
-├── middlewares/          # 中間件
-├── models/               # 資料模型 (TypeORM 實體)
-├── routes/               # API 路由
-├── types/                # TypeScript 類型定義
-├── utils/                # 工具函數
-├── views/                # 視圖 (可選，用於管理介面)
-├── public/               # 靜態檔案
-├── app.ts                # Express 應用程式設定
-├── package.json          # 相依性管理
-└── tsconfig.json         # TypeScript 設定
+├── bin/server.ts          # HTTP server 啟動入口
+├── app.ts                 # Express app 設定與路由掛載
+├── config/database.ts     # TypeORM DataSource 設定
+├── controllers/           # 路由 handler（業務邏輯）
+├── middlewares/auth.ts    # isAuthenticated / optionalAuth / adminAuth
+├── models/                # TypeORM entity（對應 DB 資料表）
+├── routes/                # Express router 定義
+├── services/storage.ts    # Supabase Storage 上傳邏輯
+├── types/                 # TypeScript 型別定義
+│   ├── api.ts             # ApiResponse、ErrorCode enum
+│   ├── auth/
+│   ├── concert/
+│   ├── organization/
+│   └── user/
+├── utils/
+│   ├── apiError.ts        # ApiError 工廠類別
+│   ├── handleErrorAsync.ts
+│   └── email.ts           # sendVerificationEmail / sendPasswordResetEmail
+├── migrations/            # TypeORM migration 檔案
+├── docs/                  # 開發文件
+└── .env.example           # 環境變數範本
 ```
 
-### 執行程式碼檢查
-
-使用以下指令檢查所有 `.ts` 檔案：
+## 使用 Docker 開發
 
 ```bash
-npm run lint
+# 建立並啟動容器（首次或修改 Dockerfile 後需 --build）
+docker-compose up --build
 ```
 
-執行下列指令，自動修正可修正的問題：
+應用程式將在 `http://localhost:3000` 上運行，程式碼變更時自動重啟。
 
-```bash
-npm run lint:fix
-```
+## 部署
+
+專案已設定 `render.yaml`，可直接部署至 [Render.com](https://render.com)：
+
+- **Region**：Singapore
+- **Build**：`npm ci && npm run build`
+- **Migration**：`npm run migrate`（pre-deploy）
+- **Start**：`node dist/bin/server.js`
+- **Health Check**：`GET /api/v1/health`
+
+## 文件索引
+
+| 文件 | 說明 |
+|------|------|
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 系統架構、目錄結構、API 路由總覽、DB Schema |
+| [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | 開發規範、命名規則、環境變數、新增 API 步驟 |
+| [docs/FEATURES.md](./docs/FEATURES.md) | 功能列表與行為描述 |
+| [docs/TESTING.md](./docs/TESTING.md) | 測試規範與指南 |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md) | 版本更新日誌 |
+| [docs/plans/](./docs/plans/) | 開發計畫（進行中） |
