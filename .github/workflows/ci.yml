@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+
+  test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: tickeasy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: tickeasy_test
+      DB_USER: testuser
+      DB_PASSWORD: testpassword
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRES_DAY: 7d
+      DB_URL: https://placeholder.supabase.co
+      DB_ANON_KEY: placeholder
+      EMAILER_USER: placeholder@example.com
+      EMAILER_OAUTH_REFRESH_TOKEN: placeholder
+      GOOGLE_CLIENT_ID: placeholder
+      GOOGLE_CLIENT_SECRET: placeholder
+      GOOGLE_CALLBACK_URL: http://localhost:3000/api/v1/auth/google/callback
+      FRONTEND_URL: http://localhost:3001
+      MERCHANTID: placeholder
+      HASHKEY: placeholder
+      HASHIV: placeholder
+      HOST: http://localhost:3000
+      REDIRECTURL: http://localhost:3001/payment/result
+      CLEANUP_TEMP_IMAGES_HOURS: 24
+      CLEANUP_INTERVAL_HOURS: 6
+      OPENAI_API_KEY: placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - name: Initialize database schema
+        run: psql -h localhost -U testuser -d tickeasy_test -f supabase.sql
+        env:
+          PGPASSWORD: testpassword
+      - name: Run migrations
+        run: npm run migrate
+      - run: npm test
