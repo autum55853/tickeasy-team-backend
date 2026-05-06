@@ -9,7 +9,6 @@ import {
   JoinColumn,
   // CreateDateColumn
 } from 'typeorm';
-import { Order } from './order.js';
 import { TicketType } from './ticket-type.js';
 // 移除直接引入 User
 // import { User } from './user.js';
@@ -26,9 +25,9 @@ export class Ticket {
   @Column({ name: 'orderId', type: 'uuid', nullable: false })
   orderId: string;
 
-  @ManyToOne(() => Order, { onDelete: 'RESTRICT' })
+  @ManyToOne('Order', { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'orderId' })
-  order: Order;
+  order: any;
 
   @Column({ name: 'ticketTypeId', type: 'uuid', nullable: false })
   ticketTypeId: string;
