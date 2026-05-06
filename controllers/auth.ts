@@ -14,7 +14,6 @@ import {
     ResendVerificationRequest,
     RequestPasswordResetRequest,
     ResetPasswordRequest,
-    GoogleRequestUser,
     ChangePasswordRequest,
 } from '../types/auth/requests.js';
 
