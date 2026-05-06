@@ -26,7 +26,7 @@ export class TicketType {
     onDelete: 'CASCADE', // 刪除場次時也刪掉票種
   })
   @JoinColumn({ name: 'concertSessionId' })
-  concertSession: ConcertSession;
+  concertSession: any;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   ticketTypeName: string;
