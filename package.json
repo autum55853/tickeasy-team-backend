@@ -9,7 +9,7 @@
     "dev": "tsx watch bin/server.ts",
     "build": "tsc && cp -r views dist/views",
     "build-windows": "tsc && xcopy views dist\\views /E /I /Y",
-    "typeorm": "typeorm-ts-node-commonjs",
+    "typeorm": "typeorm-ts-node-esm",
     "migrate": "npm run typeorm migration:run -- -d config/database.ts",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --config jest.config.cjs",
     "lint": "eslint . --ext .ts",
