@@ -55,18 +55,29 @@ tickeasy-team-backend/
 
 ```
 bin/server.ts
-  └── import app from app.ts
-        ├── helmet() / cors() / express.json()
-        ├── passport.initialize()
-        ├── /api/v1/auth     → routes/auth.ts
-        ├── /api/v1/concerts → routes/concert.ts
-        ├── /api/v1/users    → routes/user.ts
-        ├── /api/v1/organizations → routes/organization.ts
-        ├── 404 handler
-        └── global error handler
-  └── AppDataSource.initialize()  ← TypeORM 連線 PostgreSQL
-  └── app.listen(PORT)
+  ├── import app from app.ts
+  │     ├── helmet() / cors() / express.json() / cookieParser() / morgan()
+  │     ├── /api/v1/auth          → routes/auth.ts
+  │     ├── /api/v1/users         → routes/user.ts
+  │     ├── /api/v1/organizations → routes/organization.ts
+  │     ├── /api/v1/upload        → routes/upload.ts
+  │     ├── /api/v1/concerts      → routes/concert.ts
+  │     ├── /api/v1/ticket        → routes/ticket.ts
+  │     ├── /api/v1/orders        → routes/orders.ts
+  │     ├── /api/v1/payments      → routes/payment.ts
+  │     ├── /api/v1/sessions      → routes/session.ts
+  │     ├── /api/v1/knowledge-base → routes/knowledge-base.ts
+  │     ├── /api/v1/smart-reply   → routes/smart-reply.ts
+  │     ├── /api/v1/health        → routes/health.ts
+  │     ├── global error handler
+  │     └── 404 handler
+  └── AppDataSource.initialize()   ← 非同步，必須完成後才繼續
+        ├── scheduleConcertFinishJobs()
+        ├── scheduleOrderExpiredJobs()
+        └── server.listen(PORT)    ← 資料庫就緒後才開始接受請求
 ```
+
+> **重要**：`app.ts` 不做任何資料庫初始化，僅負責 Express 設定。所有需要 TypeORM DataSource 的操作（包括 `AppDataSource.getRepository()`）必須在 `AppDataSource.initialize()` 完成後才能執行。若在 DB 初始化完成前有請求進入，TypeORM 會拋出 `"No metadata for 'Entity' was found"` 錯誤。
 
 ## API 路由總覽
 

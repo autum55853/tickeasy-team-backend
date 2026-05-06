@@ -26,14 +26,6 @@ app.set('port', port);
 const server = http.createServer(app);
 
 /**
- * Listen on provided port, on all network interfaces.
- */
-
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
-
-/**
  * Normalize a port into a number, string, or false.
  */
 
@@ -90,13 +82,29 @@ function onListening() {
 }
 
 /**
- * Schedule for finishing concerts
+ * 初始化資料庫後才啟動 HTTP server 和排程任務，避免請求在 DB ready 前進入
  */
+AppDataSource.initialize()
+  .then(async () => {
+    console.log('資料庫連接成功');
 
-AppDataSource.initialize().then(async () => {
-  console.log('啟動排程任務...');
-  await scheduleConcertFinishJobs(); // 啟動排程任務
+    console.log('啟動排程任務...');
+    await scheduleConcertFinishJobs();
 
-  console.log('啟動訂單逾期排程任務...');
-  await scheduleOrderExpiredJobs(); // 啟動訂單逾期
-});
+    console.log('啟動訂單逾期排程任務...');
+    await scheduleOrderExpiredJobs();
+
+    server.listen(port);
+    server.on('error', onError);
+    server.on('listening', onListening);
+  })
+  .catch(err => {
+    console.error('資料庫連接失敗:', err);
+    console.error('錯誤詳情:', {
+      message: err.message,
+      code: err.code,
+      syscall: err.syscall,
+      hostname: err.hostname || '未提供'
+    });
+    process.exit(1);
+  });

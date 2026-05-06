@@ -9,9 +9,6 @@ dotenv.config();
 import helmet from 'helmet';
 import cors from 'cors';
 
-// 資料庫連接
-import { connectToDatabase } from './config/database.js';
-
 // 確保模型初始化
 import './models/index.js';
 
@@ -56,18 +53,6 @@ const __dirname = path.dirname(__filename);
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-
-connectToDatabase()
-  .then(() => console.log('資料庫連接成功'))
-  .catch(err => {
-    console.error('資料庫連接失敗:', err);
-    console.error('錯誤詳情:', {
-      message: err.message,
-      code: err.code,
-      syscall: err.syscall,
-      hostname: err.hostname || '未提供'
-    });
-  });
 
 // 中間件設置
 app.use(helmet());
