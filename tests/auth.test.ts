@@ -4,13 +4,13 @@ import { AppDataSource } from '../config/database.js';
 import { User } from '../models/user.js';
 
 // ── Email mock（必須在 app 動態 import 前設定）──────────────────────────
-const mockSendVerificationEmail = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
-const mockSendPasswordResetEmail = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+const mockSendVerificationEmail = jest.fn<(email: string, code: string) => Promise<void>>().mockResolvedValue(undefined);
+const mockSendPasswordResetEmail = jest.fn<(email: string, code: string) => Promise<void>>().mockResolvedValue(undefined);
 
 jest.unstable_mockModule('../utils/email.js', () => ({
   sendVerificationEmail: mockSendVerificationEmail,
   sendPasswordResetEmail: mockSendPasswordResetEmail,
-  getTransporter: jest.fn().mockResolvedValue({}),
+  getTransporter: jest.fn<() => Promise<object>>().mockResolvedValue({}),
 }));
 
 // ── 動態 import app（email mock 已生效）──────────────────────────────────
