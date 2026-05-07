@@ -22,7 +22,13 @@
 | 演唱會 | 場地資料查詢 | ✅ 完成 |
 | 圖片 | 圖片上傳（S3 / Supabase） | ✅ 完成 |
 | 圖片 | 暫存圖片定時清理 | ✅ 完成 |
-| 訂單 | 訂單流程 | 🔧 進行中 |
+| 票券 | 查詢場次票種 | ✅ 完成 |
+| 票券 | QR Code 驗票核銷 | ✅ 完成 |
+| 訂單 | 建立訂單（含庫存鎖定） | ✅ 完成 |
+| 訂單 | 查詢訂單資訊 | ✅ 完成 |
+| 訂單 | 退款申請（ECPay） | ✅ 完成 |
+| 訂單 | 取得用戶訂單清單 | ✅ 完成 |
+| 訂單 | 取得票券詳情 | ✅ 完成 |
 | 金流 | ECPay 綠界支付 | 🔧 進行中 |
 
 ---
@@ -213,3 +219,94 @@
 - 上傳端點：`/api/v1/upload`（詳細路由待補）
 - 流程：Multer 接收 → Sharp 處理 → 暫存 → 確認後移至永久儲存
 - 定時清理：依 `CLEANUP_TEMP_IMAGES_HOURS` 刪除過期暫存
+
+---
+
+## 6. 票券模組
+
+### 6.1 查詢場次票種 `GET /api/v1/ticket/:concertSessionId`
+
+無需認證。
+
+**業務邏輯**：
+1. 驗證 `concertSessionId` 對應的演唱會場次是否存在（不存在 → 404 D01）
+2. 查詢該場次下所有票種，回傳陣列（場次無票種時回傳空陣列）
+
+**回傳欄位**：`ticketTypeId`、`ticketTypeName`、`entranceType`、`ticketBenefits`、`ticketRefundPolicy`、`ticketTypePrice`、`totalQuantity`、`remainingQuantity`、`sellBeginDate`、`sellEndDate`
+
+### 6.2 驗票核銷 `POST /api/v1/ticket/verify`
+
+**需要 isAuthenticated**；只有該票券對應演唱會的主辦方或管理員可核銷。
+
+**必填欄位**：`qrCode`（字串）
+
+**業務邏輯**：由 `TicketVerificationService` 處理，驗證 QR Code 後將票券標記為已使用。
+
+---
+
+## 7. 訂單模組
+
+### 7.1 建立訂單 `POST /api/v1/orders`
+
+**需要 isAuthenticated**。
+
+**必填欄位**：`ticketTypeId`（UUID）、`purchaserName`、`purchaserEmail`、`purchaserPhone`
+
+**驗證邏輯**：
+1. `ticketTypeId` 必須為有效 UUID 格式（400 V08）
+2. `purchaserName`、`purchaserEmail`、`purchaserPhone` 不可全為空（400 D03）
+3. `purchaserPhone` 必須為 10 碼且以 `09` 開頭（400 V08）
+4. 票種必須存在（404 D01）
+5. 當前時間必須在票種販售區間內（`sellBeginDate` ≤ now ≤ `sellEndDate`）
+6. 原子性扣庫存（`remainingQuantity > 0` 條件更新，失敗代表已售罄 → 400 D10）
+
+**建立邏輯**：
+- 建立狀態為 `held` 的訂單，`isLocked = true`，鎖定有效期 **15 分鐘**
+- 產生 `orderNumber`（格式：`YYMMDDHHMMSS-XXXX`，XXXX 為 orderId 末 4 碼）
+
+**回應**：`{ orderId, lockExpireTime }`
+
+### 7.2 退款申請 `POST /api/v1/orders/:orderId/refund`
+
+**需要 isAuthenticated**。
+
+**必填欄位（body）**：`orderId`（必須與 URL params 相符）
+
+**驗證邏輯**：
+1. URL `orderId` 與 body `orderId` 必須相符（400 D03）
+2. `orderId` 必須為有效 UUID 格式（400 V08）
+3. 訂單必須存在（404 D01）
+4. 只有訂單擁有者可申請退款（403 A07）
+5. 退款截止日為演唱會場次日期前 **7 天**，超過則拒絕（403 A07）
+6. 支付記錄必須存在且狀態為 `completed`（否則 403 A07）
+
+**退款流程**：
+1. 呼叫 ECPay API（`DoAction: R`）進行信用卡退刷
+2. ECPay 回傳 `RtnCode=1` → 將訂單改為 `refunded`、付款改為 `refunded`
+3. 若當前時間仍在票種販售區間內，`remainingQuantity + 1`
+
+### 7.3 查詢訂單資訊 `GET /api/v1/orders/:orderId`
+
+**需要 isAuthenticated**。
+
+查詢條件同時過濾 `orderId` 與 `userId`（確保只能查自己的訂單）。
+
+**回應**：`{ order, concert }`（concert 為巢狀 join 取得的演唱會資料，找不到時為 null）
+
+訂單不存在（含不屬於當前用戶）→ 404 D01
+
+### 7.4 取得用戶訂單清單 `GET /api/v1/users/orders`
+
+**需要 isAuthenticated**。
+
+回傳當前登入用戶名下所有票券及對應訂單資料（含演唱會、場次資訊），每張票券為一筆。
+
+**回傳欄位**：`orderStatus`、`orderNumber`、`orderId`、`orderCreatedAt`、`ticketTypeName`、`price`、`sessionDate/Start/End/Title`、`concertName/Address/Description/Status`、`qrCode`、`tickerStatus`、`ticketId`
+
+### 7.5 取得票券詳情 `GET /api/v1/users/ticket/:ticketId`
+
+**需要 isAuthenticated**。
+
+查詢條件同時過濾 `ticketId` 與 `userId`。票券不存在（含不屬於當前用戶）→ 404 D01
+
+**回傳資料**：票券狀態、QR Code、演唱會名稱/地點、場次日期、訂單編號、購票時間、票種名稱/價格、主辦方組織資訊
