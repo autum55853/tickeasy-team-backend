@@ -4,7 +4,7 @@ import { AppDataSource } from '../config/database.js';
 import { TicketType as TicketTypeEntity} from '../models/ticket-type.js';
 import { ConcertSession as ConcertSessionEntity} from '../models/concert-session.js';
 import { handleErrorAsync, ApiError } from '../utils/index.js';
-import { ApiResponse } from '../types/api.js';
+import { ApiResponse, ErrorCode } from '../types/api.js';
 // import { Index } from 'typeorm';
 import { Payment as PaymentEntity} from '../models/payment.js';
 import crypto from 'crypto';
@@ -31,22 +31,12 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     throw ApiError.invalidFormat('票種 ID');
   }
 
-  if (!purchaserName && !purchaserEmail && !purchaserPhone){
-    return res.status(404).json(
-          {
-        status: 'failed',
-        message : '欄位未填寫完全'
-      }
-    );
-  };
+  if (!purchaserName && !purchaserEmail && !purchaserPhone) {
+    throw ApiError.create(400, '欄位未填寫完全', ErrorCode.DATA_INVALID);
+  }
 
-  if (purchaserPhone.length !== 10 && typeof purchaserPhone !== 'number' && !purchaserPhone.startsWith('09')){
-    return res.status(404).json(
-          {
-        status: 'failed',
-        message : '手機號碼格式錯誤'
-      }
-    );
+  if (purchaserPhone.length !== 10 && typeof purchaserPhone !== 'number' && !purchaserPhone.startsWith('09')) {
+    throw ApiError.invalidFormat('手機號碼');
   }
 
   const ticketTypeRepository = AppDataSource.getRepository(TicketTypeEntity);
@@ -76,13 +66,8 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     .execute();
 
   if (!updateResult.affected || updateResult.affected === 0) {
-    return res.status(400).json(
-          {
-        status: 'failed',
-        message : '票券已售罄'
-      }
-  );
-  };
+    throw ApiError.dataConstraintViolation('票券已售罄');
+  }
 
   // 設定 lock 時間（例如 15 分鐘後過期）
   const lockExpireTime = new Date(now.getTime() + 15 * 60 * 1000);
@@ -124,11 +109,8 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
 
   const body = req.body;
   const { orderId } = req.params;
-  if (orderId !== body.orderId){
-    return res.status(404).json({
-        status: 'failed',
-        message: '訂單編號錯誤'
-      });
+  if (orderId !== body.orderId) {
+    throw ApiError.create(400, '訂單編號錯誤', ErrorCode.DATA_INVALID);
   }
   // const authenticatedUser = req.user as Express.User; // 從 middleware 拿到 userId
   const authenticatedUser = req.user as { userId: string; role: string; email: string; };
@@ -160,10 +142,13 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   // console.log('order:', selectedOrder);
   const ticketTypeRepository = AppDataSource.getRepository(TicketTypeEntity);
   const ticketType = await ticketTypeRepository.findOneBy({ ticketTypeId: selectedOrder.ticketTypeId });
+  if (!ticketType) {
+    throw ApiError.notFound('票種');
+  }
   const ConcertSessionRepository = AppDataSource.getRepository(ConcertSessionEntity);
-  const ConcertSession = await ConcertSessionRepository.findOneBy({ sessionId: ticketType?.concertSessionId });
+  const ConcertSession = await ConcertSessionRepository.findOneBy({ sessionId: ticketType.concertSessionId });
   if (!ConcertSession || !ConcertSession.sessionDate) {
-    throw ApiError.notFound('演唱會場次資料錯誤');
+    throw ApiError.notFound('演唱會場次資料');
   }
   
   const startTime = ConcertSession.sessionDate;
@@ -174,11 +159,8 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   console.log('now:',now);
   console.log('refundDeadline:',refundDeadline);
 
-  if (afterRefundDeadline){
-     return res.status(403).json({
-        status: 'failed',
-        message: '此訂單不可退款'
-      });
+  if (afterRefundDeadline) {
+    throw ApiError.create(403, '此訂單不可退款', ErrorCode.AUTH_FORBIDDEN);
   }
 
   const paymentRepository = AppDataSource.getRepository(PaymentEntity);
@@ -252,11 +234,8 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
       await paymentRepository.save(selectedPayment);
       console.log('payment update');
     }
-    else{
-      return res.status(404).json({
-        status: 'failed',
-        message: '申請退款失敗'
-      });
+    else {
+      throw ApiError.create(400, '申請退款失敗', ErrorCode.DATA_INVALID);
     }
     const now = new Date();
 
@@ -301,7 +280,7 @@ export const getOrderInfo = handleErrorAsync(async (req: Request, res: Response<
     .getOne();
 
   if (!result) {
-    return res.status(404).json({ status: 'failed', message: '訂單不存在' });
+    throw ApiError.notFound('訂單');
   }
 
   // 只回傳 order 本身（不帶 ticketType 等巢狀物件）

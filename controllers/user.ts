@@ -450,10 +450,7 @@ export const getTicketdetail = handleErrorAsync(async (req: Request, res: Respon
     .getRawOne();
 
   if (!rawTicket) {
-    return res.status(404).json({
-      status: 'failed',
-      message: '查無此票券資料',
-    });
+    throw ApiError.notFound('票券');
   }
   // console.log(rawTicket);
   const data = {

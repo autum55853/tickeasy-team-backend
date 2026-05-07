@@ -115,6 +115,23 @@ bin/server.ts
 | PUT | `/profile` | isAuthenticated | 更新個人資料 |
 | GET | `/profile/regions` | — | 取得地區選項清單 |
 | GET | `/profile/event-types` | — | 取得活動類型選項清單 |
+| GET | `/orders` | isAuthenticated | 取得用戶訂單清單（含票券資訊） |
+| GET | `/ticket/:ticketId` | isAuthenticated | 取得單一票券詳情 |
+
+### 票券 `/api/v1/ticket`
+
+| 方法 | 路徑 | 認證 | 說明 |
+|------|------|------|------|
+| GET | `/:concertSessionId` | — | 取得場次票種列表（場次不存在 → 404） |
+| POST | `/verify` | isAuthenticated | QR Code 驗票核銷（限主辦方或 admin） |
+
+### 訂單 `/api/v1/orders`
+
+| 方法 | 路徑 | 認證 | 說明 |
+|------|------|------|------|
+| POST | `/` | isAuthenticated | 建立訂單（含庫存鎖定，15 分鐘有效） |
+| GET | `/:orderId` | isAuthenticated | 查詢訂單資訊（限本人） |
+| POST | `/:orderId/refund` | isAuthenticated | 申請退款（呼叫 ECPay DoAction:R） |
 
 ### 組織 `/api/v1/organizations`
 

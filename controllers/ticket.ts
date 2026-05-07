@@ -5,6 +5,7 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
 import { TicketType as TicketTypeEntity } from '../models/ticket-type.js';
+import { ConcertSession as ConcertSessionEntity } from '../models/concert-session.js';
 import { handleErrorAsync, ApiError } from '../utils/index.js';
 import { ApiResponse } from '../types/api.js';
 import { TicketVerificationService } from '../services/ticketVerificationService.js';
@@ -32,19 +33,25 @@ export const getConcertTickets = handleErrorAsync(async (req: Request, res: Resp
     throw ApiError.fieldRequired('concertSessionId');
   }
 
+  const concertSessionRepository = AppDataSource.getRepository(ConcertSessionEntity);
+  const session = await concertSessionRepository.findOne({ where: { sessionId: concertSessionId } });
+  if (!session) {
+    throw ApiError.notFound('演唱會場次');
+  }
+
   const ticketTypeRepository = AppDataSource.getRepository(TicketTypeEntity);
   const tickets = await ticketTypeRepository.find({
     where: { concertSessionId },
     select: [
-      'ticketTypeId', 
-      'ticketTypeName', 
-      'entranceType', 
-      'ticketBenefits', 
-      'ticketRefundPolicy', 
-      'ticketTypePrice', 
-      'totalQuantity', 
-      'remainingQuantity', 
-      'sellBeginDate', 
+      'ticketTypeId',
+      'ticketTypeName',
+      'entranceType',
+      'ticketBenefits',
+      'ticketRefundPolicy',
+      'ticketTypePrice',
+      'totalQuantity',
+      'remainingQuantity',
+      'sellBeginDate',
       'sellEndDate'
     ]
   });
