@@ -82,10 +82,6 @@ jobs:
           node-version: '18'
           cache: 'npm'
       - run: npm ci
-      - name: Initialize database schema
-        run: psql -h localhost -U testuser -d tickeasy_test -f supabase.sql
-        env:
-          PGPASSWORD: testpassword
       - name: Run migrations
         run: npm run migrate
       - run: npm test
