@@ -594,10 +594,6 @@ export const getPopularConcerts = handleErrorAsync(
       ],
     });
 
-    if (!popularConcerts.length) {
-      throw ApiError.notFound('熱門演唱會資料');
-    }
-
     res.status(200).json({
       message: '取得資料成功',
       status: 'success',
@@ -721,7 +717,6 @@ export const searchConcerts = handleErrorAsync(
       .skip(skip)
       .take(take)
       .getManyAndCount();
-    console.log('concerts', concerts);
     const result = concerts.map((concert) => ({
       concertId: concert.concertId,
       conTitle: concert.conTitle,
@@ -735,10 +730,6 @@ export const searchConcerts = handleErrorAsync(
       locationTagName: (concert as any).locationTag?.locationTagName,
       musicTagName: (concert as any).musicTag?.musicTagName,
     }));
-
-    if (!result.length) {
-      throw ApiError.notFound('演唱會資料');
-    }
 
     res.status(200).json({
       status: 'success',
@@ -777,10 +768,6 @@ export const getBannerConcerts = handleErrorAsync(
       ],
       take: 5,
     });
-
-    if (!concerts.length) {
-      throw ApiError.notFound('熱門活動banner');
-    }
 
     res.status(200).json({
       message: '取得資料成功',
