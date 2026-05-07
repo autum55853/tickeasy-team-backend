@@ -12,7 +12,7 @@ import { LocationTag } from '../models/location-tag.js';
 import { MusicTag } from '../models/music-tag.js';
 import { Brackets, IsNull } from 'typeorm';
 
-/* eslint-disable no-unused-vars */
+ 
 // 查詢意圖枚舉
 export enum SearchIntent {
   ARTIST = 'artist',           // 藝人名查詢
@@ -22,7 +22,7 @@ export enum SearchIntent {
   GENRE = 'genre',            // 音樂類型查詢
   GENERAL = 'general'         // 一般關鍵字查詢
 }
-/* eslint-enable no-unused-vars */
+ 
 
 // 查詢參數介面
 export interface ConcertSearchParams {

@@ -10,7 +10,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Concert, ReviewStatus } from './concert.js';
+import { ReviewStatus } from './concert.js';
 
 export type ReviewType = 'ai_auto' | 'manual_admin' | 'manual_system';
 
@@ -24,15 +24,15 @@ export class ConcertReview {
 
   @ManyToOne('Concert', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'concertId' })
-  concert: Concert;
+  concert: any;
 
   @Column({ type: 'varchar', length: 20, nullable: false })
   reviewType: ReviewType; // 'ai_auto', 'manual_admin', 'manual_system'
 
   @Column({
     type: 'enum',
-    enum: 'ReviewStatus',
-    default: 'pending',
+    enum: ReviewStatus,
+    default: ReviewStatus.PENDING,
     nullable: false,
   })
   reviewStatus: ReviewStatus;

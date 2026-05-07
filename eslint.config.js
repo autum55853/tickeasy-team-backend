@@ -31,7 +31,7 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest', // 指定 ECMAScript 版本
         sourceType: 'module', // 指定模組類型
-        project: './tsconfig.json', // 指定 tsconfig.json 路徑，用於啟用需要類型資訊的規則
+        project: './tsconfig.eslint.json', // 指定 tsconfig.json 路徑，用於啟用需要類型資訊的規則
         // 其他解析器選項，如果需要
       },
       // 定義你的程式碼運行環境中的全域變數
@@ -39,7 +39,7 @@ export default [
          // 載入 Node.js 環境的所有全域變數 (包括 process, console 等)
          ...globals.node,
          // 如果還有其他環境的全局變數 (例如用於測試框架 Jest)，可以在這裡添加
-         // ...globals.jest,
+         // ...globals.jest,  // 測試 globals 由下方 tests/** 配置區塊處理
       },
     },
 
@@ -55,6 +55,7 @@ export default [
       ...tseslint.configs.recommended.rules,
       // 你可以在這裡加入或覆蓋更多的規則
       // 例如，你的原始規則:
+      'no-unused-vars': 'off', // 關閉 ESLint 內建版本，避免與 @typescript-eslint 版本衝突
       '@typescript-eslint/no-unused-vars': ['warn'], // 保留未使用的變數為警告
       'quotes': ['error', 'single', { avoidEscape: true }], // 單引號，允許為了避免轉義而使用雙引號
       'semi': ['error', 'always'], // 強制使用分號
@@ -73,4 +74,14 @@ export default [
   //     // ... .js 檔案的規則
   //   }
   // }
+
+  // 5. 測試檔案（tests/ 目錄）加入 Jest 全域變數，使 beforeAll / afterAll 等可被識別
+  {
+    files: ['tests/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+  },
 ];

@@ -1,28 +1,116 @@
-/**
- * 資料庫配置文件
- * 
- * 使用: TypeORM (https://typeorm.io/)
- * 優勢:
- * - 原生 TypeScript 支持，類型定義完善
- * - 基於裝飾器的實體定義，符合物件導向設計
- * - 強大的關聯映射和查詢能力
- * - 靈活的遷移系統
- */
-
 import { DataSource } from 'typeorm';
-// import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import * as net from 'net';
+import { SocksClient } from 'socks';
 
-// 定義 __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 載入環境變數
 dotenv.config();
 
-// 創建數據源配置
+// 解析 ALL_PROXY 環境變數中的 SOCKS5 代理設定
+function parseSocksProxy(): { host: string; port: number } | null {
+  const raw = process.env.ALL_PROXY || process.env.all_proxy;
+  if (!raw) return null;
+  try {
+    const normalized = raw.replace(/^socks5h?:\/\//, 'socks5://');
+    const url = new URL(normalized);
+    if (url.protocol === 'socks5:' || url.protocol === 'socks:') {
+      return { host: url.hostname, port: parseInt(url.port) || 1080 };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+// 建立透過 SOCKS5 代理連線的 socket 工廠（供 pg 的 stream 選項使用）
+// pg 取得 socket 後會呼叫 socket.connect(port, host)，
+// 我們覆寫 connect() 讓它透過 SOCKS5 建立 TCP 連線。
+function createSocksSocketFactory(proxy: { host: string; port: number }) {
+  return function (_pgConfig: unknown): net.Socket {
+    const socket = new net.Socket();
+
+    // SOCKS socket 的 _handle 永遠為 null（不走 net 原生 connect）。
+    // 原始 _read 每次呼叫都會注冊 once('connect')，且 'connect' 觸發後再呼叫
+    // _read 仍會持續累積 listener（因 _handle 仍為 null）。
+    // 覆寫 _read 改為 no-op：資料由 SOCKS bridge 透過 socket.push(chunk) 推入。
+    // setMaxListeners(0) 停用此 socket 的 listener 數量警告（TLS handshake 期間合理多）。
+    socket.setMaxListeners(0);
+    let socksConnected = false;
+    socket.once('connect', () => { socksConnected = true; });
+    (socket as any)._read = function (_n: number): void {
+      // 連線前：等待 'connect'（不需注冊 listener，push 在 'connect' 後由 SOCKS bridge 驅動）
+      // 連線後：資料已由 socksSocket 的 'data' handler 透過 socket.push(chunk) 推入
+      if (socksConnected) return;
+    };
+
+    (socket as any).connect = function (port: number, host: string): net.Socket {
+      SocksClient.createConnection({
+        proxy: { host: proxy.host, port: proxy.port, type: 5 },
+        command: 'connect',
+        destination: { host, port },
+      })
+        .then(({ socket: socksSocket }) => {
+          // 將 SOCKS socket 收到的資料推入 pg 的 readable buffer
+          socksSocket.on('data', (chunk: Buffer) => socket.push(chunk));
+          socksSocket.on('error', (err: Error) => socket.emit('error', err));
+          socksSocket.on('close', () => socket.emit('close', false));
+          socksSocket.on('end', () => socket.push(null));
+
+          // 將 pg 的寫入操作轉發至 SOCKS socket
+          socket.write = (chunk: any, enc?: any, cb?: any): boolean =>
+            socksSocket.write(chunk, enc, cb);
+          socket.end = (chunk?: any, enc?: any, cb?: any): net.Socket => {
+            socksSocket.end(chunk, enc, cb);
+            return socket;
+          };
+          socket.destroy = (err?: Error): net.Socket => {
+            socksSocket.destroy(err);
+            return socket;
+          };
+
+          socket.emit('connect');
+        })
+        .catch((err: Error) => socket.emit('error', err));
+
+      return socket;
+    };
+
+    // _handle 永遠為 null（我們不走 net 原生 connect），避免 pg 呼叫 setKeepAlive 時出錯
+    (socket as any).setKeepAlive = (): net.Socket => socket;
+
+    return socket;
+  };
+}
+
+// 測試環境（無 SOCKS proxy）專用的 socket 工廠。
+// 直連遠端 Supabase 時 TLS handshake 期間，pg 內部及 TLS 層會向 'connect' 事件
+// 注冊多個合法 listener，超過 Node.js 預設 10 個上限觸發 MaxListenersExceededWarning。
+// setMaxListeners(0) 只對此特定 socket 停用警告（不影響其他 socket 的全域設定）。
+function createTestSocketFactory() {
+  return function (_pgConfig: unknown): net.Socket {
+    const socket = new net.Socket();
+    socket.setMaxListeners(0);
+    return socket;
+  };
+}
+
+const socksProxy = parseSocksProxy();
+
+const streamFactory = socksProxy
+  ? createSocksSocketFactory(socksProxy)
+  : process.env.NODE_ENV === 'test'
+    ? createTestSocketFactory()
+    : null;
+
+const extra: Record<string, unknown> = {
+  ...(process.env.NODE_ENV === 'test' ? { max: 2 } : {}),
+  ...(streamFactory !== null ? { stream: streamFactory } : {}),
+};
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
@@ -35,16 +123,9 @@ export const AppDataSource = new DataSource({
   entities: [path.join(__dirname, '..', 'models', '*.{ts,js}')],
   migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
   subscribers: [],
+  extra,
 });
 
-/**
- * 連接到資料庫，並根據環境執行初始設定
- * 
- * 功能:
- * 1. 檢查並創建資料庫 (僅開發環境)
- * 2. 初始化 TypeORM 連接
- * 3. 根據配置執行遷移
- */
 export const connectToDatabase = async () => {
   try {
     await AppDataSource.initialize();

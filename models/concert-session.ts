@@ -28,7 +28,7 @@ export class ConcertSession {
     onDelete: 'CASCADE', // 刪除音樂會時也刪掉場次
   })
   @JoinColumn({ name: 'concertId' })
-  concert: Concert;
+  concert: any;
 
   @OneToMany(() => TicketType, (ticketType) => ticketType.concertSession, {
     cascade: true, // 建立 session 時可同時建立 ticketTypes

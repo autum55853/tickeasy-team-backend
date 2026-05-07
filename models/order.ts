@@ -12,7 +12,6 @@ import {
   OneToMany
 } from 'typeorm';
 import { TicketType } from './ticket-type.js';
-import { Ticket } from './ticket.js';
 import { Payment } from './payment.js';
 
 // 避免直接導入 User 類型，使用接口代替
@@ -92,8 +91,8 @@ export class Order {
   @UpdateDateColumn({ nullable: true })
   updatedAt?: Date;
   
-  @OneToMany(() => Ticket, ticket => ticket.order)
-  tickets: Ticket[];
+  @OneToMany('Ticket', 'order')
+  tickets: any[];
   
   @OneToMany('Payment', 'order')
   payments: Payment[];

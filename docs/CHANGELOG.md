@@ -2,6 +2,11 @@
 
 ## [未發布]
 
+### 修復
+- **[2026-05-06] `/api/v1/concerts/banners` HTTP 500 — "No metadata for 'Concert' was found"**
+  - **根本原因**：`app.ts` 在模組載入時就呼叫 `connectToDatabase()`（即 `AppDataSource.initialize()`），而 `bin/server.ts` 也呼叫一次 `AppDataSource.initialize()`，兩者在同一個事件迴圈 tick 中並行執行，造成競爭條件。同時 `server.listen()` 在 DB 初始化完成前就被呼叫，使伺服器在 TypeORM entity metadata 尚未載入時即開始接受請求。
+  - **修復**：移除 `app.ts` 中的 `connectToDatabase()` 呼叫，讓 `app.ts` 僅負責 Express 設定。在 `bin/server.ts` 中確保執行順序為：`AppDataSource.initialize()` → 排程任務 → `server.listen()`，伺服器只在資料庫完全就緒後才開始接受連線。
+
 ### 進行中
 - 訂單流程整合
 - ECPay 綠界金流整合

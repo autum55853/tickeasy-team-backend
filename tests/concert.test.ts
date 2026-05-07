@@ -1,3 +1,5 @@
+import { createServer } from 'http';
+import type { Server } from 'http';
 import request from 'supertest';
 import app from '../app.js';
 import { AppDataSource } from '../config/database.js';
@@ -28,6 +30,8 @@ let testMusicTag: MusicTag;
 // 測試建立的演唱會 ID（用於後續清理）
 const createdConcertIds: string[] = [];
 
+let server: Server;
+
 // ── 草稿演唱會的最小 payload ────────────────────────────────────────────
 function draftPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -35,9 +39,9 @@ function draftPayload(overrides: Record<string, unknown> = {}) {
     venueId: testVenue.venueId,
     locationTagId: testLocationTag.locationTagId,
     musicTagId: testMusicTag.musicTagId,
-    title: `Test Concert ${Date.now()}`,
+    conTitle: `Test Concert ${Date.now()}`,
     conInfoStatus: 'draft',
-    ticketTypes: [],
+    sessions: [],
     ...overrides,
   };
 }
@@ -45,9 +49,9 @@ function draftPayload(overrides: Record<string, unknown> = {}) {
 // ── 完整 published 演唱會 payload ───────────────────────────────────────
 function publishedPayload(overrides: Record<string, unknown> = {}) {
   const base = draftPayload({
-    introduction: '測試介紹',
-    location: '台北',
-    address: '台北市信義區測試路1號',
+    conIntroduction: '測試介紹',
+    conLocation: '台北',
+    conAddress: '台北市信義區測試路1號',
     eventStartDate: '2026-09-01',
     eventEndDate: '2026-09-02',
     ticketPurchaseMethod: '線上購票',
@@ -56,7 +60,7 @@ function publishedPayload(overrides: Record<string, unknown> = {}) {
     conInfoStatus: 'published',
     imgBanner: 'https://example.com/banner.jpg',
     imgSeattable: 'https://example.com/seat.jpg',
-    ticketTypes: [
+    sessions: [
       {
         ticketTypeName: '一般票',
         entranceType: '一般入場',
@@ -73,6 +77,7 @@ function publishedPayload(overrides: Record<string, unknown> = {}) {
 }
 
 beforeAll(async () => {
+  server = createServer(app).listen(0);
   testUser = await createTestUser({ name: 'Concert Tester' });
   authToken = generateTestToken(testUser.userId, testUser.role);
   testOrg = await createTestOrganization(testUser.userId);
@@ -82,6 +87,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (server) {
+    server.closeAllConnections();
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+
   if (!AppDataSource.isInitialized) return;
 
   // 按照 FK 依賴順序刪除
@@ -113,7 +123,7 @@ afterAll(async () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('POST /api/v1/concerts', () => {
   it('成功建立草稿演唱會 → 201', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
       .send(draftPayload());
@@ -126,16 +136,16 @@ describe('POST /api/v1/concerts', () => {
   });
 
   it('演唱會名稱重複 → 409', async () => {
-    const payload = draftPayload({ title: `Duplicate ${Date.now()}` });
+    const payload = draftPayload({ conTitle: `Duplicate ${Date.now()}` });
     // 先建立
-    const first = await request(app)
+    const first = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
       .send(payload);
     createdConcertIds.push(first.body.data.concert.concertId);
 
     // 再建立同名
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
       .send(payload);
@@ -145,7 +155,7 @@ describe('POST /api/v1/concerts', () => {
   });
 
   it('未認證 → 401', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .send(draftPayload());
 
@@ -154,7 +164,7 @@ describe('POST /api/v1/concerts', () => {
   });
 
   it('published 狀態缺少必填欄位 → 400', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -168,7 +178,7 @@ describe('POST /api/v1/concerts', () => {
   });
 
   it('published 狀態缺少主視覺圖 → 400', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -182,7 +192,7 @@ describe('POST /api/v1/concerts', () => {
   });
 
   it('結束時間早於開始時間 → 400', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
       .send(publishedPayload({
@@ -195,7 +205,7 @@ describe('POST /api/v1/concerts', () => {
   });
 
   it('票種售票結束早於開始 → 400', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
       .send(publishedPayload({
@@ -223,27 +233,27 @@ describe('PUT /api/v1/concerts/:concertId', () => {
   let draftConcertId: string;
 
   beforeAll(async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
-      .send(draftPayload({ title: `Update Test ${Date.now()}` }));
+      .send(draftPayload({ conTitle: `Update Test ${Date.now()}` }));
 
     draftConcertId = res.body.data.concert.concertId;
     createdConcertIds.push(draftConcertId);
   });
 
   it('成功更新草稿演唱會 → 200', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .put(`/api/v1/concerts/${draftConcertId}`)
       .set('Authorization', `Bearer ${authToken}`)
-      .send(draftPayload({ title: `Updated Title ${Date.now()}` }));
+      .send(draftPayload({ conTitle: `Updated Title ${Date.now()}` }));
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('success');
   });
 
   it('未認證 → 401', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .put(`/api/v1/concerts/${draftConcertId}`)
       .send(draftPayload());
 
@@ -253,7 +263,7 @@ describe('PUT /api/v1/concerts/:concertId', () => {
 
   it('演唱會不存在 → 404', async () => {
     const fakeId = '00000000-0000-0000-0000-000000000000';
-    const res = await request(app)
+    const res = await request(server)
       .put(`/api/v1/concerts/${fakeId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send(draftPayload());
@@ -269,7 +279,7 @@ describe('PUT /api/v1/concerts/:concertId', () => {
       { conInfoStatus: 'published' }
     );
 
-    const res = await request(app)
+    const res = await request(server)
       .put(`/api/v1/concerts/${draftConcertId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send(draftPayload());
@@ -292,17 +302,17 @@ describe('PATCH /api/v1/concerts/:concertId/visit', () => {
   let concertId: string;
 
   beforeAll(async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
-      .send(draftPayload({ title: `Visit Test ${Date.now()}` }));
+      .send(draftPayload({ conTitle: `Visit Test ${Date.now()}` }));
 
     concertId = res.body.data.concert.concertId;
     createdConcertIds.push(concertId);
   });
 
   it('成功增加 visitCount → 200', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .patch(`/api/v1/concerts/${concertId}/visit`);
 
     expect(res.status).toBe(200);
@@ -312,15 +322,15 @@ describe('PATCH /api/v1/concerts/:concertId/visit', () => {
   });
 
   it('連續增加 → visitCount 累加', async () => {
-    await request(app).patch(`/api/v1/concerts/${concertId}/visit`);
-    const res = await request(app).patch(`/api/v1/concerts/${concertId}/visit`);
+    await request(server).patch(`/api/v1/concerts/${concertId}/visit`);
+    const res = await request(server).patch(`/api/v1/concerts/${concertId}/visit`);
 
     expect(res.body.data.visitCount).toBeGreaterThanOrEqual(3);
   });
 
   it('演唱會不存在 → 404', async () => {
     const fakeId = '00000000-0000-0000-0000-000000000000';
-    const res = await request(app)
+    const res = await request(server)
       .patch(`/api/v1/concerts/${fakeId}/visit`);
 
     expect(res.status).toBe(404);
@@ -335,17 +345,17 @@ describe('PATCH /api/v1/concerts/:concertId/promotion', () => {
   let concertId: string;
 
   beforeAll(async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/v1/concerts')
       .set('Authorization', `Bearer ${authToken}`)
-      .send(draftPayload({ title: `Promo Test ${Date.now()}` }));
+      .send(draftPayload({ conTitle: `Promo Test ${Date.now()}` }));
 
     concertId = res.body.data.concert.concertId;
     createdConcertIds.push(concertId);
   });
 
   it('成功設定 promotion → 200', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .patch(`/api/v1/concerts/${concertId}/promotion`)
       .send({ promotion: 5 });
 
@@ -355,7 +365,7 @@ describe('PATCH /api/v1/concerts/:concertId/promotion', () => {
   });
 
   it('promotion 為 0 → 200', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .patch(`/api/v1/concerts/${concertId}/promotion`)
       .send({ promotion: 0 });
 
@@ -364,7 +374,7 @@ describe('PATCH /api/v1/concerts/:concertId/promotion', () => {
   });
 
   it('promotion 為負數 → 400', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .patch(`/api/v1/concerts/${concertId}/promotion`)
       .send({ promotion: -1 });
 
@@ -373,7 +383,7 @@ describe('PATCH /api/v1/concerts/:concertId/promotion', () => {
   });
 
   it('promotion 為字串 → 400', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .patch(`/api/v1/concerts/${concertId}/promotion`)
       .send({ promotion: 'high' });
 
@@ -383,7 +393,7 @@ describe('PATCH /api/v1/concerts/:concertId/promotion', () => {
 
   it('演唱會不存在 → 404', async () => {
     const fakeId = '00000000-0000-0000-0000-000000000000';
-    const res = await request(app)
+    const res = await request(server)
       .patch(`/api/v1/concerts/${fakeId}/promotion`)
       .send({ promotion: 1 });
 
@@ -397,7 +407,7 @@ describe('PATCH /api/v1/concerts/:concertId/promotion', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('GET /api/v1/concerts/venues', () => {
   it('成功取得場地列表 → 200', async () => {
-    const res = await request(app).get('/api/v1/concerts/venues');
+    const res = await request(server).get('/api/v1/concerts/venues');
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('success');
@@ -414,7 +424,7 @@ describe('GET /api/v1/concerts/venues', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('GET /api/v1/concerts/popular', () => {
   it('回應格式正確（有資料回 200，無資料回 404）', async () => {
-    const res = await request(app).get('/api/v1/concerts/popular');
+    const res = await request(server).get('/api/v1/concerts/popular');
 
     expect([200, 404]).toContain(res.status);
     expect(res.body.status).toBeDefined();
@@ -426,7 +436,7 @@ describe('GET /api/v1/concerts/popular', () => {
   });
 
   it('take 參數限制回傳數量', async () => {
-    const res = await request(app).get('/api/v1/concerts/popular?take=1');
+    const res = await request(server).get('/api/v1/concerts/popular?take=1');
 
     if (res.status === 200) {
       expect(res.body.data.length).toBeLessThanOrEqual(1);
@@ -441,7 +451,7 @@ describe('GET /api/v1/concerts/popular', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('GET /api/v1/concerts/search', () => {
   it('回應格式正確（有資料回 200，無資料回 404）', async () => {
-    const res = await request(app).get('/api/v1/concerts/search');
+    const res = await request(server).get('/api/v1/concerts/search');
 
     expect([200, 404]).toContain(res.status);
     expect(res.body.status).toBeDefined();
@@ -454,7 +464,7 @@ describe('GET /api/v1/concerts/search', () => {
   });
 
   it('keyword 搜尋不存在的關鍵字 → 404', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .get('/api/v1/concerts/search?keyword=zzz_no_match_9999');
 
     expect(res.status).toBe(404);
@@ -467,7 +477,7 @@ describe('GET /api/v1/concerts/search', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('GET /api/v1/concerts/banners', () => {
   it('回應格式正確（有資料回 200，無資料回 404）', async () => {
-    const res = await request(app).get('/api/v1/concerts/banners');
+    const res = await request(server).get('/api/v1/concerts/banners');
 
     expect([200, 404]).toContain(res.status);
     expect(res.body.status).toBeDefined();

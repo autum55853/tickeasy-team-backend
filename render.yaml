@@ -1,12 +1,11 @@
 services:
   - type: web
     name: tickeasy-backend
-    runtime: node
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     region: singapore
     plan: free
-    buildCommand: npm ci && npm run build
     preDeployCommand: npm run migrate
-    startCommand: node dist/bin/server.js
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV

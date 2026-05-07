@@ -22,7 +22,7 @@ import { Ticket } from './ticket.js';
 import { Order } from './order.js';
 import { Organization } from './organization.js';
 
-/* eslint-disable no-unused-vars */
+ 
 export enum UserRole {
     USER = 'user',
     ADMIN = 'admin',
@@ -38,7 +38,7 @@ export enum Gender {
  * 用戶偏好地區枚舉
  */
 
-/* eslint-disable no-unused-vars */
+ 
 export enum Region {
     NORTH = '北部',
     SOUTH = '南部',

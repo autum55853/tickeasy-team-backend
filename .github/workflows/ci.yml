@@ -56,7 +56,7 @@ jobs:
       DB_NAME: tickeasy_test
       DB_USER: testuser
       DB_PASSWORD: testpassword
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-integration-test-secret-not-for-production' }}
       JWT_EXPIRES_DAY: 7d
       DB_URL: https://placeholder.supabase.co
       DB_ANON_KEY: placeholder
@@ -82,10 +82,6 @@ jobs:
           node-version: '18'
           cache: 'npm'
       - run: npm ci
-      - name: Initialize database schema
-        run: psql -h localhost -U testuser -d tickeasy_test -f supabase.sql
-        env:
-          PGPASSWORD: testpassword
       - name: Run migrations
         run: npm run migrate
       - run: npm test

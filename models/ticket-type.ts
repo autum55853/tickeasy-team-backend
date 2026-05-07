@@ -10,8 +10,6 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Order } from './order.js';
-import { Ticket } from './ticket.js';
 import { ConcertSession } from './concert-session.js';
 // import { Concert } from './concert.js';
 
@@ -28,7 +26,7 @@ export class TicketType {
     onDelete: 'CASCADE', // 刪除場次時也刪掉票種
   })
   @JoinColumn({ name: 'concertSessionId' })
-  concertSession: ConcertSession;
+  concertSession: any;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   ticketTypeName: string;
@@ -60,11 +58,11 @@ export class TicketType {
   @CreateDateColumn({ nullable: false })
   createdAt: Date;
 
-  @OneToMany(() => Order, (order) => order.ticketType)
-  orders: Order[];
+  @OneToMany('Order', 'ticketType')
+  orders: any[];
 
-  @OneToMany(() => Ticket, (ticket) => ticket.ticketType, {
-    cascade: false, // 不要同時建立票券
+  @OneToMany('Ticket', 'ticketType', {
+    cascade: false,
   })
-  tickets: Ticket[];
+  tickets: any[];
 }

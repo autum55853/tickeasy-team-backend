@@ -241,4 +241,5 @@ docker-compose up --build
 | [docs/FEATURES.md](./docs/FEATURES.md) | 功能列表與行為描述 |
 | [docs/TESTING.md](./docs/TESTING.md) | 測試規範與指南 |
 | [docs/CHANGELOG.md](./docs/CHANGELOG.md) | 版本更新日誌 |
+| [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md) | 專案目錄結構詳細說明 |
 | [docs/plans/](./docs/plans/) | 開發計畫（進行中） |

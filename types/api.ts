@@ -58,7 +58,7 @@ export enum HttpStatus {
  * YZ: 序號
  */
 
-/* eslint-disable no-unused-vars */
+ 
 export enum ErrorCode {
   // 身份認證與授權相關錯誤 (A)
   AUTH_EMAIL_REQUIRED = 'A01',

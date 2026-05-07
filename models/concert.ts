@@ -21,7 +21,7 @@ import { ConcertReview } from './concert-review.js';
 
 export type ConInfoStatus = 'draft' | 'reviewing' | 'published' | 'rejected' | 'finished';
 
-/* eslint-disable no-unused-vars */
+ 
 export enum ReviewStatus {
   PENDING = 'pending',
   APPROVED = 'approved',

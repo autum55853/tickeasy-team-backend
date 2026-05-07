@@ -96,6 +96,32 @@ throw ApiError.validation('表單驗證失敗', {
 | `CLEANUP_INTERVAL_HOURS` | 每幾小時執行一次清理 | 否 | 6 |
 | `OPENAI_API_KEY` | OpenAI API Key | 否 | — |
 
+## 常見陷阱
+
+### TypeORM "No metadata for 'Entity' was found"
+
+**症狀**：HTTP 500，錯誤訊息為 `No metadata for "XxxEntity" was found`。
+
+**原因**：`AppDataSource.getRepository(Entity)` 或任何 TypeORM 操作在 `AppDataSource.initialize()` 完成之前被呼叫。常見觸發情境：
+- 伺服器已開始接受 HTTP 請求，但 DB 初始化尚未完成（啟動後的短暫時間窗口）
+- 在 `app.ts` 模組載入期間就呼叫 `AppDataSource.initialize()`，與 `bin/server.ts` 中的呼叫形成並行競爭
+
+**正確做法**：`server.listen()` 必須放在 `AppDataSource.initialize().then()` 回呼內，確保伺服器只在資料庫完全就緒後才接受請求。`app.ts` 不應包含任何 DB 初始化邏輯。
+
+```typescript
+// bin/server.ts — 正確的啟動順序
+AppDataSource.initialize()
+  .then(async () => {
+    await scheduleConcertFinishJobs();
+    await scheduleOrderExpiredJobs();
+    server.listen(port);  // ← DB 就緒後才 listen
+  })
+  .catch(err => {
+    console.error('資料庫連接失敗:', err);
+    process.exit(1);
+  });
+```
+
 ## 計畫歸檔流程
 
 1. 計畫檔案命名格式：`YYYY-MM-DD-<feature-name>.md`
