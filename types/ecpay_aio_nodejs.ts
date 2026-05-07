@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+ 
 
 declare module 'ecpay_aio_nodejs' {
   interface ECPayOptions {

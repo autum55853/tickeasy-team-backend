@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDa
 import { User } from './user.js';
 
 // 工作日枚舉
-/* eslint-disable no-unused-vars */
+ 
 export enum DayOfWeek {
   SUNDAY = 0,
   MONDAY = 1,
@@ -12,7 +12,7 @@ export enum DayOfWeek {
   FRIDAY = 5,
   SATURDAY = 6
 }
-/* eslint-enable no-unused-vars */
+ 
 
 @Entity('supportSchedule')
 export class SupportSchedule {

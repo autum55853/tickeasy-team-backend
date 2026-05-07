@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn } from 'typeorm';
 import { User } from './user.js';
 
-/* eslint-disable no-unused-vars */
+ 
 // 會話類型枚舉
 export enum SessionType {
   BOT = 'bot',
@@ -24,7 +24,7 @@ export enum Priority {
   HIGH = 'high',
   URGENT = 'urgent'
 }
-/* eslint-enable no-unused-vars */
+ 
 
 @Entity('supportSession')
 export class SupportSession {

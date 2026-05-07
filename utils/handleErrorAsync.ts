@@ -3,13 +3,13 @@ import { Request, Response, NextFunction } from 'express';
 /**
  * 非同步路由處理器類型
  */
-/* eslint-disable no-unused-vars */
+ 
 export type AsyncRequestHandler = (
   req: Request, 
   res: Response, 
   next: NextFunction
 ) => Promise<any>;
-/* eslint-enable no-unused-vars */
+ 
 
 /**
  * 異步錯誤處理包裝器

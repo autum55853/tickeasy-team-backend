@@ -5,7 +5,7 @@
 
 import openaiService from './openaiService.js';
 
-/* eslint-disable no-unused-vars */
+ 
 // 支援的意圖類型
 export enum IntentType {
   CONCERT = 'concert',           // 演唱會相關
@@ -15,7 +15,7 @@ export enum IntentType {
   GENERAL_SERVICE = 'general_service', // 一般客服
   UNKNOWN = 'unknown'           // 無法識別
 }
-/* eslint-enable no-unused-vars */
+ 
 
 // 意圖分析結果
 export interface IntentAnalysisResult {
