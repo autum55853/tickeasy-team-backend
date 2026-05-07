@@ -423,26 +423,19 @@ describe('GET /api/v1/concerts/venues', () => {
 // GET /api/v1/concerts/popular
 // ════════════════════════════════════════════════════════════════════════
 describe('GET /api/v1/concerts/popular', () => {
-  it('回應格式正確（有資料回 200，無資料回 404）', async () => {
+  it('回應格式正確（永遠回 200，無資料時 data 為空陣列）', async () => {
     const res = await request(server).get('/api/v1/concerts/popular');
 
-    expect([200, 404]).toContain(res.status);
-    expect(res.body.status).toBeDefined();
-
-    if (res.status === 200) {
-      expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data[0]).toHaveProperty('concertId');
-    }
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+    expect(Array.isArray(res.body.data)).toBe(true);
   });
 
   it('take 參數限制回傳數量', async () => {
     const res = await request(server).get('/api/v1/concerts/popular?take=1');
 
-    if (res.status === 200) {
-      expect(res.body.data.length).toBeLessThanOrEqual(1);
-    } else {
-      expect(res.status).toBe(404);
-    }
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeLessThanOrEqual(1);
   });
 });
 
@@ -450,25 +443,23 @@ describe('GET /api/v1/concerts/popular', () => {
 // GET /api/v1/concerts/search
 // ════════════════════════════════════════════════════════════════════════
 describe('GET /api/v1/concerts/search', () => {
-  it('回應格式正確（有資料回 200，無資料回 404）', async () => {
+  it('回應格式正確（永遠回 200，無資料時 data 為空陣列）', async () => {
     const res = await request(server).get('/api/v1/concerts/search');
 
-    expect([200, 404]).toContain(res.status);
-    expect(res.body.status).toBeDefined();
-
-    if (res.status === 200) {
-      expect(res.body).toHaveProperty('data');
-      expect(res.body).toHaveProperty('count');
-      expect(res.body).toHaveProperty('totalPages');
-    }
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body).toHaveProperty('count');
+    expect(res.body).toHaveProperty('totalPages');
   });
 
-  it('keyword 搜尋不存在的關鍵字 → 404', async () => {
+  it('keyword 搜尋不存在的關鍵字 → 200 空陣列', async () => {
     const res = await request(server)
       .get('/api/v1/concerts/search?keyword=zzz_no_match_9999');
 
-    expect(res.status).toBe(404);
-    expect(res.body.status).toBe('failed');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+    expect(res.body.data).toHaveLength(0);
   });
 });
 
@@ -476,15 +467,12 @@ describe('GET /api/v1/concerts/search', () => {
 // GET /api/v1/concerts/banners
 // ════════════════════════════════════════════════════════════════════════
 describe('GET /api/v1/concerts/banners', () => {
-  it('回應格式正確（有資料回 200，無資料回 404）', async () => {
+  it('回應格式正確（永遠回 200，無資料時 data 為空陣列）', async () => {
     const res = await request(server).get('/api/v1/concerts/banners');
 
-    expect([200, 404]).toContain(res.status);
-    expect(res.body.status).toBeDefined();
-
-    if (res.status === 200) {
-      expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeLessThanOrEqual(5);
-    }
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeLessThanOrEqual(5);
   });
 });

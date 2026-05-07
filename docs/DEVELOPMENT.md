@@ -62,6 +62,10 @@ throw ApiError.validation('表單驗證失敗', {
 { "status": "failed", "message": "...", "code": "A06", "details": {} }
 ```
 
+**查詢類 API 的空結果處理原則**：
+- 列表查詢（search、popular、banners 等）無符合資料時，回傳 `200 + data: []`，不拋 `ApiError.notFound()`。
+- 僅「查詢單一指定資源」（如 `GET /:id`）找不到時才拋 404。
+
 ## 環境變數
 
 | 變數 | 用途 | 必要 | 預設值 |

@@ -188,16 +188,19 @@
 只回傳 `conInfoStatus === 'published'` 的演唱會。
 回傳包含 venueName、locationTagName、musicTagName（join 查詢）。
 結果含 `{ data, page, perPage, count, totalPages, sortedBy }`。
+無符合條件資料時回傳 `200 + data: []`，不拋 404。
 
 ### 4.4 熱門演唱會 `GET /api/v1/concerts/popular`
 
 **排序**：promotion ASC → visitCount ASC（promotion 越小越優先）
 **Query 參數**：`take`（回傳筆數，預設 3）
 只回傳 `published` 狀態演唱會。
+無符合條件資料時回傳 `200 + data: []`，不拋 404。
 
 ### 4.5 首頁 Banner `GET /api/v1/concerts/banners`
 
-同排序邏輯，固定回傳前 5 筆，回傳欄位：`concertId, conTitle, conIntroduction, imgBanner, promotion, visitCount`
+同排序邏輯，固定回傳前 5 筆，回傳欄位：`concertId, conTitle, conIntroduction, imgBanner, promotion, visitCount`。
+無符合條件資料時回傳 `200 + data: []`，不拋 404。
 
 ### 4.6 visitCount 計數 `PATCH /api/v1/concerts/:concertId/visit`
 
