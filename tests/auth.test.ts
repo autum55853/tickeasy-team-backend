@@ -22,6 +22,8 @@ const TEST_PASSWORD = 'Test1234';
 const TEST_NAME = 'Auth Tester';
 
 let createdUserId: string;
+let capturedVerificationCode: string;
+let capturedResetCode: string;
 
 // ── 清理測試資料 ────────────────────────────────────────────────────────
 afterAll(async () => {
@@ -51,6 +53,7 @@ describe('POST /api/v1/auth/register', () => {
     expect(mockSendVerificationEmail).toHaveBeenCalledWith(TEST_EMAIL, expect.any(String));
 
     createdUserId = res.body.data.user.userId;
+    capturedVerificationCode = mockSendVerificationEmail.mock.calls[0]?.[1] as string;
   });
 
   it('Email 已被使用 → 409', async () => {
@@ -177,17 +180,8 @@ describe('POST /api/v1/auth/login', () => {
 // POST /api/v1/auth/verify-email
 // ════════════════════════════════════════════════════════════════════════
 describe('POST /api/v1/auth/verify-email', () => {
-  let verificationCode: string;
-
-  beforeAll(async () => {
-    // 重新發送一次驗證碼，從 mock 取得 code
-    mockSendVerificationEmail.mockClear();
-    await request(app)
-      .post('/api/v1/auth/resend-verification')
-      .send({ email: TEST_EMAIL });
-
-    verificationCode = mockSendVerificationEmail.mock.calls[0]?.[1] as string;
-  });
+  // 直接使用 register 時捕捉的驗證碼，避免 resend 觸發 10 分鐘 rate limit
+  const verificationCode = () => capturedVerificationCode;
 
   it('缺少 email → 400', async () => {
     const res = await request(app)
@@ -219,7 +213,7 @@ describe('POST /api/v1/auth/verify-email', () => {
   it('正確驗證碼 → 200，isEmailVerified: true', async () => {
     const res = await request(app)
       .post('/api/v1/auth/verify-email')
-      .send({ email: TEST_EMAIL, code: verificationCode });
+      .send({ email: TEST_EMAIL, code: verificationCode() });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('success');
@@ -294,6 +288,7 @@ describe('POST /api/v1/auth/request-password-reset', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('success');
     expect(mockSendPasswordResetEmail).toHaveBeenCalledWith(TEST_EMAIL, expect.any(String));
+    capturedResetCode = mockSendPasswordResetEmail.mock.calls[0]?.[1] as string;
   });
 });
 
@@ -302,22 +297,13 @@ describe('POST /api/v1/auth/request-password-reset', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('POST /api/v1/auth/reset-password', () => {
   const NEW_PASSWORD = 'NewPass5678';
-  let resetCode: string;
-
-  beforeAll(async () => {
-    // 請求重置，從 mock 拿到 code
-    mockSendPasswordResetEmail.mockClear();
-    await request(app)
-      .post('/api/v1/auth/request-password-reset')
-      .send({ email: TEST_EMAIL });
-
-    resetCode = mockSendPasswordResetEmail.mock.calls[0]?.[1] as string;
-  });
+  // 直接使用 request-password-reset 成功時捕捉的碼，避免二次請求觸發 rate limit
+  const resetCode = () => capturedResetCode;
 
   it('缺少 email → 400', async () => {
     const res = await request(app)
       .post('/api/v1/auth/reset-password')
-      .send({ code: resetCode, newPassword: NEW_PASSWORD });
+      .send({ code: resetCode(), newPassword: NEW_PASSWORD });
 
     expect(res.status).toBe(400);
     expect(res.body.status).toBe('failed');
@@ -335,7 +321,7 @@ describe('POST /api/v1/auth/reset-password', () => {
   it('缺少 newPassword → 400', async () => {
     const res = await request(app)
       .post('/api/v1/auth/reset-password')
-      .send({ email: TEST_EMAIL, code: resetCode });
+      .send({ email: TEST_EMAIL, code: resetCode() });
 
     expect(res.status).toBe(400);
     expect(res.body.status).toBe('failed');
@@ -344,7 +330,7 @@ describe('POST /api/v1/auth/reset-password', () => {
   it('密碼格式不符 → 400', async () => {
     const res = await request(app)
       .post('/api/v1/auth/reset-password')
-      .send({ email: TEST_EMAIL, code: resetCode, newPassword: 'short' });
+      .send({ email: TEST_EMAIL, code: resetCode(), newPassword: 'short' });
 
     expect(res.status).toBe(400);
     expect(res.body.status).toBe('failed');
@@ -362,7 +348,7 @@ describe('POST /api/v1/auth/reset-password', () => {
   it('正確重置碼 → 200，可用新密碼登入', async () => {
     const res = await request(app)
       .post('/api/v1/auth/reset-password')
-      .send({ email: TEST_EMAIL, code: resetCode, newPassword: NEW_PASSWORD });
+      .send({ email: TEST_EMAIL, code: resetCode(), newPassword: NEW_PASSWORD });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('success');

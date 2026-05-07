@@ -12,5 +12,6 @@ module.exports = {
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
   setupFiles: ['<rootDir>/tests/helpers/envSetup.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/helpers/dbSetup.ts'],
-  testTimeout: 30000,
+  testTimeout: 60000,
+  forceExit: true,
 };

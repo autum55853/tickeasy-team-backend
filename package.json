@@ -12,7 +12,7 @@
     "typeorm": "typeorm-ts-node-esm",
     "migrate": "npm run typeorm migration:run -- -d config/database.ts",
     "migrate:test": "dotenv -e .env.test.local -- npm run typeorm migration:run -- -d config/database.ts",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --config jest.config.cjs",
+    "test": "node --experimental-vm-modules node_modules/jest-cli/bin/jest.js --config jest.config.cjs",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix"
   },
@@ -52,6 +52,7 @@
     "pg": "^8.11.3",
     "reflect-metadata": "^0.1.14",
     "sharp": "^0.34.1",
+    "socks": "^2.8.8",
     "typeorm": "^0.3.23",
     "validator": "^13.15.0"
   },

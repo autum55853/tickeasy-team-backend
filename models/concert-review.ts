@@ -31,8 +31,8 @@ export class ConcertReview {
 
   @Column({
     type: 'enum',
-    enum: 'ReviewStatus',
-    default: 'pending',
+    enum: ReviewStatus,
+    default: ReviewStatus.PENDING,
     nullable: false,
   })
   reviewStatus: ReviewStatus;

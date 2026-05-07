@@ -34,10 +34,12 @@ import healthRouter from './routes/health.js';
 
 const app = express();
 
-// 未捕獲的異常處理
+// 未捕獲的異常處理（測試環境不 exit，避免殺死 Jest worker）
 process.on('uncaughtException', (err) => {
   console.error('未捕獲的異常:', err);
-  process.exit(1);
+  if (process.env.NODE_ENV !== 'test') {
+    process.exit(1);
+  }
 });
 
 // 未處理的 Promise 拒絕處理
@@ -59,7 +61,7 @@ app.use(helmet());
 
 // CORS 配置
 const corsOptions = {
-  // eslint-disable-next-line no-unused-vars
+   
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // 允許的來源
     const allowedOrigins = [

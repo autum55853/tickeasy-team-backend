@@ -37,7 +37,7 @@ export const sendVerificationEmail = async (email: string, code: string) => {
     const info = await transporter.sendMail({
       from: process.env.EMAILER_USER,
       to: email,
-      subject: '電子郵件驗證',
+      subject: 'Tickeasy 電子郵件驗證',
       html: `
         <h1>電子郵件驗證</h1>
         <p>您的驗證碼是：<strong>${code}</strong></p>

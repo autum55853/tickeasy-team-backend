@@ -19,7 +19,12 @@ export class SupabaseService {
       throw new Error('缺少 Supabase 環境變數: DB_URL 或 DB_ANON_KEY');
     }
 
-    this.client = createClient(supabaseUrl, supabaseKey);
+    this.client = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
     console.log('✅ Supabase 客戶端初始化成功');
   }
 
