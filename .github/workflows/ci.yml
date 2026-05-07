@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
 
 jobs:
   lint:
@@ -85,3 +88,12 @@ jobs:
       - name: Run migrations
         run: npm run migrate
       - run: npm test
+
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: [lint, build, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Render Deploy
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
