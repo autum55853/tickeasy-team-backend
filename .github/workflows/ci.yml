@@ -65,9 +65,9 @@ jobs:
       DB_ANON_KEY: placeholder
       EMAILER_USER: placeholder@example.com
       EMAILER_OAUTH_REFRESH_TOKEN: placeholder
-      GOOGLE_CLIENT_ID: placeholder
-      GOOGLE_CLIENT_SECRET: placeholder
-      GOOGLE_CALLBACK_URL: http://localhost:3000/api/v1/auth/google/callback
+      GOOGLE_OAUTH_CLIENT_ID: placeholder
+      GOOGLE_OAUTH_CLIENT_SECRET: placeholder
+      GOOGLE_OAUTH_CALLBACK_URL: http://localhost:3000/api/v1/auth/google/callback
       FRONTEND_URL: http://localhost:3001
       MERCHANTID: placeholder
       HASHKEY: placeholder
