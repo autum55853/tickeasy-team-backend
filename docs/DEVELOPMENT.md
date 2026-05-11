@@ -84,12 +84,14 @@ throw ApiError.validation('表單驗證失敗', {
 | `AWS_SECRET_ACCESS_KEY` | AWS Secret Key | 是（S3） | — |
 | `AWS_S3_BUCKET` | S3 Bucket 名稱 | 是（S3） | — |
 | `EMAILER_USER` | Gmail SMTP 帳號 | 是 | — |
-| `EMAILER_PASSWORD` | Gmail App Password | 是 | — |
+| `EMAILER_OAUTH_REFRESH_TOKEN` | Gmail OAuth2 Refresh Token | 是 | — |
 | `JWT_SECRET` | JWT 簽名密鑰 | 是 | — |
 | `JWT_EXPIRES_DAY` | JWT 有效期 | 否 | 7d |
-| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | 是（OAuth） | — |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth Secret | 是（OAuth） | — |
-| `GOOGLE_CALLBACK_URL` | Google OAuth Callback URL | 是（OAuth） | — |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth 登入 Client ID（passport-google-oauth20） | 是（OAuth） | — |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth 登入 Client Secret | 是（OAuth） | — |
+| `GOOGLE_OAUTH_CALLBACK_URL` | Google OAuth Callback URL（後端路徑） | 是（OAuth） | — |
+| `GOOGLE_GMAIL_CLIENT_ID` | Gmail 寄信 Client ID（nodemailer OAuth2） | 是（Email） | — |
+| `GOOGLE_GMAIL_CLIENT_SECRET` | Gmail 寄信 Client Secret | 是（Email） | — |
 | `FRONTEND_URL` | 前端網址（OAuth 重定向） | 是 | — |
 | `MERCHANTID` | ECPay 商店代號 | 是（金流） | — |
 | `HASHKEY` | ECPay HashKey | 是（金流） | — |
@@ -125,6 +127,18 @@ AppDataSource.initialize()
     process.exit(1);
   });
 ```
+
+### Google OAuth `redirect_uri_mismatch` / 已封鎖存取權
+
+**症狀**：Google OAuth 登入頁面顯示「已封鎖存取權：這個應用程式的要求無效」或 `400: redirect_uri_mismatch`。
+
+**原因**：後端有兩個 Google 服務（Gmail 寄信 + OAuth 登入），若兩者共用同一組 env var（`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`），其中一個 client 的設定會蓋過另一個，導致送出的 `client_id` 與 Google Cloud Console 中登記 redirect URI 的 OAuth client 不符。
+
+**正確做法**：兩個服務使用獨立 env var：
+- OAuth 登入（`config/passport.ts`）：`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_CALLBACK_URL`
+- Gmail 寄信（`utils/email.ts`）：`GOOGLE_GMAIL_CLIENT_ID` / `GOOGLE_GMAIL_CLIENT_SECRET`
+
+確認 `GOOGLE_OAUTH_CLIENT_ID` 對應的 Google Cloud Console OAuth client 已加入正確的 **Authorized redirect URI**（後端 callback 路徑，例如 `https://example.com/api/v1/auth/google/callback`）。
 
 ## 計畫歸檔流程
 

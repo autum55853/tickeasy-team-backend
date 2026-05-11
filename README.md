@@ -90,13 +90,15 @@ JWT_SECRET=      # 自訂安全密鑰（必填，否則無法啟動）
 JWT_EXPIRES_DAY=7d
 
 # Email（Gmail + Google OAuth2）
-EMAILER_USER=            # Gmail 帳號
-EMAILER_OAUTH_REFRESH_TOKEN=  # Google OAuth2 refresh token
+EMAILER_USER=                    # Gmail 帳號
+EMAILER_OAUTH_REFRESH_TOKEN=     # Gmail OAuth2 refresh token
+GOOGLE_GMAIL_CLIENT_ID=          # Gmail 寄信專用 Google OAuth Client ID
+GOOGLE_GMAIL_CLIENT_SECRET=      # Gmail 寄信專用 Google OAuth Client Secret
 
-# Google OAuth 登入
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback
+# Google OAuth 第三方登入（passport-google-oauth20）
+GOOGLE_OAUTH_CLIENT_ID=          # OAuth 登入專用 Client ID
+GOOGLE_OAUTH_CLIENT_SECRET=      # OAuth 登入專用 Client Secret
+GOOGLE_OAUTH_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback
 FRONTEND_URL=http://localhost:3010  # 登入成功後重定向的前端網址
 
 # 綠界 ECPay 金流

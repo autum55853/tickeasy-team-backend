@@ -1,15 +1,15 @@
 {
   "permissions": {
-    "allow": ["Edit(~/.npm/**)", "Read(~/.npm/**)"],
-    "deny": ["Bash(rm -rf *)", "Bash(sudo *)", "Bash(git push *)", "Bash(git reset --hard *)"]
-  },
-  "sandbox": {
-    "enabled": true,
-    "autoAllowBashIfSandboxed": true,
-    "network": {
-      "allowLocalBinding": true,
-      "allowedDomains": ["registry.npmjs.org", "*.npmjs.org", "*.github.com", "github.com", "*.githubusercontent.com", "*.supabase.co"]
-    }
+    "allow": [
+      "Edit(~/.npm/**)",
+      "Read(~/.npm/**)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(git push *)",
+      "Bash(git reset --hard *)"
+    ]
   },
   "hooks": {
     "PreToolUse": [
@@ -45,5 +45,23 @@
         ]
       }
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "registry.npmjs.org",
+        "*.npmjs.org",
+        "*.github.com",
+        "github.com",
+        "*.githubusercontent.com",
+        "*.supabase.co"
+      ],
+      "allowLocalBinding": true
+    }
+  },
+  "enabledPlugins": {
+    "supabase@claude-plugins-official": true
   }
 }

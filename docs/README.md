@@ -12,7 +12,7 @@
 | 資料庫 | PostgreSQL (Supabase 雲端) |
 | 認證 | JWT + Passport.js (Google OAuth 2.0) |
 | 圖片儲存 | Multer + Sharp + Supabase Storage / AWS S3 |
-| 郵件 | Nodemailer (Gmail SMTP) |
+| 郵件 | Nodemailer (Gmail + Google OAuth2) |
 | 金流 | 綠界 ECPay |
 | 測試 | Jest + Supertest |
 | Lint | ESLint + TypeScript-ESLint |
