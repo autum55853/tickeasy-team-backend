@@ -2,6 +2,12 @@
 
 ## [未發布]
 
+### 新增
+- **[2026-05-11] CI Discord 通知**
+  - GitHub Actions workflow 新增 `notify` job，於 Lint / Build / Test 完成後推送結果至 Discord 頻道
+  - 使用 `sarisia/actions-status-discord@v1`，成功顯示綠色、失敗顯示紅色，含各 job 狀態與 Actions run 連結
+  - 需在 GitHub Secrets 設定 `DISCORD_WEBHOOK`（Discord 頻道 Webhook URL）
+
 ### 修復
 - **[2026-05-11] Google OAuth 登入 — `redirect_uri_mismatch` / 已封鎖存取權**
   - **根本原因**：後端同時使用兩個 Google 服務（Gmail 寄信 + OAuth 登入），但 `config/passport.ts` 與 `utils/email.ts` 共用同一組 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` 環境變數，導致 OAuth 登入送出 Gmail 的 Client ID，與 Google Cloud Console 登記 redirect URI 的 OAuth client 不符。

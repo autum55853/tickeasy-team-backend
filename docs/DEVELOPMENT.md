@@ -66,6 +66,22 @@ throw ApiError.validation('表單驗證失敗', {
 - 列表查詢（search、popular、banners 等）無符合資料時，回傳 `200 + data: []`，不拋 `ApiError.notFound()`。
 - 僅「查詢單一指定資源」（如 `GET /:id`）找不到時才拋 404。
 
+## CI/CD 與 GitHub Secrets
+
+`.github/workflows/ci.yml` 執行 Lint → Build → Integration Tests → Deploy → Discord 通知。
+
+### GitHub Repository Secrets 必要設定
+
+| Secret 名稱 | 用途 | 必要 |
+|-------------|------|------|
+| `DISCORD_WEBHOOK` | Discord 頻道 Webhook URL，CI 結果推送通知 | 是 |
+| `RENDER_DEPLOY_HOOK_URL` | Render 部署觸發 Hook URL | 是（deploy job） |
+| `JWT_SECRET` | CI 測試用 JWT Secret（未設定則使用預設測試值） | 否 |
+
+**設定方式**：Repo → Settings → Secrets and variables → Actions → New repository secret
+
+**取得 Discord Webhook URL**：Discord 頻道 → 編輯頻道 → 整合 → Webhook → 新增 Webhook → 複製 URL
+
 ## 環境變數
 
 | 變數 | 用途 | 必要 | 預設值 |
