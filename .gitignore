@@ -27,3 +27,4 @@ coverage/
 # 操作系統
 .DS_Store
 Thumbs.db 
+.mcp.json
