@@ -1,9 +1,9 @@
 import nodemailer from 'nodemailer';
 
 export const getTransporter = async () => {
-  const { EMAILER_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, EMAILER_OAUTH_REFRESH_TOKEN } = process.env;
+  const { EMAILER_USER, GOOGLE_GMAIL_CLIENT_ID, GOOGLE_GMAIL_CLIENT_SECRET, EMAILER_OAUTH_REFRESH_TOKEN } = process.env;
 
-  if (!EMAILER_USER || !GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !EMAILER_OAUTH_REFRESH_TOKEN) {
+  if (!EMAILER_USER || !GOOGLE_GMAIL_CLIENT_ID || !GOOGLE_GMAIL_CLIENT_SECRET || !EMAILER_OAUTH_REFRESH_TOKEN) {
     throw new Error('Email 服務未啟用');
   }
 
@@ -13,8 +13,8 @@ export const getTransporter = async () => {
       auth: {
         type: 'OAuth2',
         user: EMAILER_USER,
-        clientId: GOOGLE_CLIENT_ID,
-        clientSecret: GOOGLE_CLIENT_SECRET,
+        clientId: GOOGLE_GMAIL_CLIENT_ID,
+        clientSecret: GOOGLE_GMAIL_CLIENT_SECRET,
         refreshToken: EMAILER_OAUTH_REFRESH_TOKEN,
       }
     });

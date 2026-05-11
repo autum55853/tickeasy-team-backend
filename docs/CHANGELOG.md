@@ -3,6 +3,10 @@
 ## [未發布]
 
 ### 修復
+- **[2026-05-11] Google OAuth 登入 — `redirect_uri_mismatch` / 已封鎖存取權**
+  - **根本原因**：後端同時使用兩個 Google 服務（Gmail 寄信 + OAuth 登入），但 `config/passport.ts` 與 `utils/email.ts` 共用同一組 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` 環境變數，導致 OAuth 登入送出 Gmail 的 Client ID，與 Google Cloud Console 登記 redirect URI 的 OAuth client 不符。
+  - **修復**：拆開兩組 env var——OAuth 登入改用 `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_CALLBACK_URL`；Gmail 寄信改用 `GOOGLE_GMAIL_CLIENT_ID` / `GOOGLE_GMAIL_CLIENT_SECRET`。部署時須確認 `GOOGLE_OAUTH_CLIENT_ID` 對應的 Google Cloud Console OAuth client 已登記正確的 redirect URI。
+
 - **[2026-05-06] `/api/v1/concerts/banners` HTTP 500 — "No metadata for 'Concert' was found"**
   - **根本原因**：`app.ts` 在模組載入時就呼叫 `connectToDatabase()`（即 `AppDataSource.initialize()`），而 `bin/server.ts` 也呼叫一次 `AppDataSource.initialize()`，兩者在同一個事件迴圈 tick 中並行執行，造成競爭條件。同時 `server.listen()` 在 DB 初始化完成前就被呼叫，使伺服器在 TypeORM entity metadata 尚未載入時即開始接受請求。
   - **修復**：移除 `app.ts` 中的 `connectToDatabase()` 呼叫，讓 `app.ts` 僅負責 Express 設定。在 `bin/server.ts` 中確保執行順序為：`AppDataSource.initialize()` → 排程任務 → `server.listen()`，伺服器只在資料庫完全就緒後才開始接受連線。
