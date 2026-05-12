@@ -194,10 +194,10 @@ export class User {
     @Column('jsonb', { default: '[]', nullable: true })
     searchHistory: SearchHistoryItem[];
 
-    @CreateDateColumn({ nullable: false })
+    @CreateDateColumn({ type: 'timestamptz', nullable: false })
     createdAt: Date;
 
-    @UpdateDateColumn({ nullable: false })
+    @UpdateDateColumn({ type: 'timestamptz', nullable: false })
     updatedAt: Date;
 
     @DeleteDateColumn({ nullable: true })

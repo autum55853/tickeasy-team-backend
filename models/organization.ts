@@ -48,6 +48,6 @@ export class Organization {
   @Column({ type: 'varchar', length: 200, nullable: true })
   orgWebsite: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 } 

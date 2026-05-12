@@ -38,10 +38,10 @@ export class SupportSchedule {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
   // 虛擬屬性：取得星期名稱

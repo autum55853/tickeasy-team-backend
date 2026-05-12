@@ -55,7 +55,7 @@ export class TicketType {
   @Column({ type: 'timestamp', nullable: true })
   sellEndDate: Date;
 
-  @CreateDateColumn({ nullable: false })
+  @CreateDateColumn({ type: 'timestamptz', nullable: false })
   createdAt: Date;
 
   @OneToMany('Order', 'ticketType')

@@ -50,6 +50,6 @@ export class ConcertSession {
   @Column({ type: 'text', nullable: true })
   imgSeattable: string; // 只會有一張
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

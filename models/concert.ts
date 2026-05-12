@@ -119,10 +119,10 @@ export class Concert {
   @Column({ type: 'timestamp', nullable: true })
   cancelledAt: Date | null;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
   @OneToMany(() => ConcertSession, (session) => session.concert, {
