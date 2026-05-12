@@ -3,6 +3,15 @@
 ## [未發布]
 
 ### 新增
+- **[2026-05-12] OpenAI → Gemini AI 全面遷移**
+  - 新增 `services/geminiService.ts`，實作與 `openaiService` 相同介面（`AIReviewResponse`、`getChatCompletion`、`reviewConcert`、`testConnection`）
+  - `embedding-service.ts`：改用 Gemini `text-embedding-004`（768 維，原 OpenAI 1536 維）；向量以 JSONB 儲存，無需 DB schema 遷移
+  - `chat-service.ts`：以 DB 歷史重建取代 OpenAI Responses API，使用 `startChat() + sendMessage()` 維持對話記憶
+  - `concertReviewService.ts`、`intent-classification-service.ts` import 改為 `geminiService`
+  - `openaiService.ts` 加上棄用說明並保留供回滾參考（`[OpenAI]` 標記）
+  - 新增環境變數 `GEMINI_API_KEY`；`OPENAI_API_KEY` 標為已棄用
+  - **部署後動作**：呼叫 `POST /api/v1/knowledge-base/embeddings/update`（需 Admin token）重生所有知識庫向量（768 維）
+
 - **[2026-05-11] CI Discord 通知**
   - GitHub Actions workflow 新增 `notify` job，於 Lint / Build / Test 完成後推送結果至 Discord 頻道
   - 使用 `sarisia/actions-status-discord@v1`，成功顯示綠色、失敗顯示紅色，含各 job 狀態與 Actions run 連結

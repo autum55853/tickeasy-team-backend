@@ -337,6 +337,36 @@ bin/server.ts
 
 環境變數：`MERCHANTID`、`HASHKEY`、`HASHIV`、`HOST`（ECPay 主機）、`REDIRECTURL`（付款後重定向）
 
+## AI 服務架構
+
+### 技術選型
+
+| 功能 | 服務 | 模型 |
+|------|------|------|
+| 聊天 / 內容審核 | `services/geminiService.ts` | `gemini-2.0-flash` |
+| 語意搜尋向量 | `services/embedding-service.ts` | `text-embedding-004`（768 維） |
+| 意圖分類 | `services/intent-classification-service.ts` | 傳統關鍵字匹配（AI 開關可啟用 Gemini） |
+
+> **注意**：OpenAI 原始實作保留於 `services/openaiService.ts`（加 `[OpenAI]` 標記），供回滾參考。
+
+### Gemini 服務（`geminiService.ts`）
+
+- 介面與舊 `openaiService` 相同（`AIReviewResponse`、`getChatCompletion`、`reviewConcert`、`testConnection`）
+- 缺少 `GEMINI_API_KEY` 時降級警告（不拋出例外），`isInitialized = false`
+- `getChatCompletion`：`system` role 轉為 `systemInstruction`，`assistant` 轉為 `model`
+- `reviewConcert`：使用 `responseMimeType: 'application/json'` 取得結構化輸出
+
+### 智慧客服對話（`chat-service.ts`）
+
+- 初次對話（`chat()`）：以語意搜尋建立 context，呼叫 `model.generateContent(prompt)`
+- 後續對話（`continueChat()`）：從 DB 載入最近 10 則 `SupportMessage` 重建 `Content[]` history，使用 `model.startChat({ history }).sendMessage()`
+- 不再依賴 OpenAI Responses API 的 `responseId`；`responseId` 欄位保留但存 `undefined`
+
+### Embedding 服務（`embedding-service.ts`）
+
+- 向量維度：768（舊 OpenAI 為 1536）；以 JSONB 儲存，切換供應商不需 DB migration
+- 切換供應商後需呼叫 `POST /api/v1/knowledge-base/embeddings/update`（需 Admin token）重生所有知識庫向量
+
 ## 圖片儲存架構
 
 1. Multer 接收上傳的圖片（記憶體緩衝）

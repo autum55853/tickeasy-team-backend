@@ -116,7 +116,8 @@ throw ApiError.validation('表單驗證失敗', {
 | `REDIRECTURL` | 付款後重定向 URL | 是（金流） | — |
 | `CLEANUP_TEMP_IMAGES_HOURS` | 清理幾小時前的暫存圖片 | 否 | 24 |
 | `CLEANUP_INTERVAL_HOURS` | 每幾小時執行一次清理 | 否 | 6 |
-| `OPENAI_API_KEY` | OpenAI API Key | 否 | — |
+| `GEMINI_API_KEY` | Gemini AI API Key（取代 OpenAI，用於 AI 審核 / 智慧客服 / Embedding） | 否 | — |
+| `OPENAI_API_KEY` | ~~已棄用~~ — 原 OpenAI API Key，已由 `GEMINI_API_KEY` 取代 | 否 | — |
 
 ## 常見陷阱
 
