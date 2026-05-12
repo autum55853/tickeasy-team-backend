@@ -13,6 +13,7 @@
 7. [提交審核](#7-提交審核)
 8. [狀態流轉說明](#8-狀態流轉說明)
 9. [圖片管理補充](#9-圖片管理補充)
+10. [附錄：範例情境](#10-附錄範例情境)
 
 ---
 
@@ -83,8 +84,7 @@ Content-Type: application/json
   "data": {
     "organization": {
       "organizationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "orgName": "星聲音樂工作室",
-      ...
+      "orgName": "星聲音樂工作室"
     }
   }
 }
@@ -120,9 +120,22 @@ GET /api/v1/concerts/music-tags
 - **Banner 主視覺**（整場演唱會一張）
 - **座位圖**（每個場次一張）
 
-圖片來源可使用 [Unsplash](https://unsplash.com/s/photos/concert) 搜尋 `concert` 取得免費授權圖片。
+### 4.1 取得免費圖片來源（Unsplash）
 
-### 4.1 上傳 Banner（暫存）
+推薦從 [Unsplash](https://unsplash.com/) 取得免費授權圖片，可下載後上傳。以下為可直接使用的圖片 URL（Unsplash License，免費商業用途）：
+
+| 主題 | 下載 URL |
+|------|---------|
+| 演唱會人群 | `https://images.unsplash.com/photo-1501386761578-eac5c294458a?w=1920&q=80` |
+| 舞台燈光 | `https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1920&q=80` |
+| 爵士音樂 | `https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=1920&q=80` |
+| 古典交響 | `https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1920&q=80` |
+| 搖滾現場 | `https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=1920&q=80` |
+| 電子音樂節 | `https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=1920&q=80` |
+
+> 使用方式：瀏覽器開啟 URL 下載圖片，再透過以下 API 上傳。
+
+### 4.2 上傳 Banner（暫存）
 
 不帶 `targetId` 即為暫存模式，圖片上傳後回傳暫存 URL，於建立演唱會時填入 `imgBanner`。
 
@@ -135,7 +148,7 @@ file: <concert_banner.jpg>
 uploadContext: CONCERT_BANNER
 ```
 
-### 4.2 上傳座位圖（暫存）
+### 4.3 上傳座位圖（暫存）
 
 每個場次需要一張座位圖，重複此步驟取得各場次的 URL。
 
@@ -179,7 +192,7 @@ Content-Type: application/json
 ```json
 {
   "organizationId": "<Step 2 取得的 organizationId>",
-  "conTitle": "2025 星聲之夜演唱會",
+  "conTitle": "演唱會名稱",
   "conInfoStatus": "draft"
 }
 ```
@@ -193,8 +206,7 @@ Content-Type: application/json
   "data": {
     "concert": {
       "concertId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "conInfoStatus": "draft",
-      ...
+      "conInfoStatus": "draft"
     }
   }
 }
@@ -214,78 +226,6 @@ Authorization: Bearer <JWT_TOKEN>
 Content-Type: application/json
 ```
 
-**完整 Request Body：**
-
-```json
-{
-  "organizationId": "<organizationId>",
-  "venueId": "<Step 3 取得的 venueId>",
-  "locationTagId": "<Step 3 取得的 locationTagId>",
-  "musicTagId": "<Step 3 取得的 musicTagId>",
-  "conTitle": "2025 星聲之夜演唱會",
-  "conIntroduction": "一年一度的年度大型演唱會，集結多位頂尖歌手，帶來震撼人心的演出體驗。",
-  "conLocation": "臺北小巨蛋",
-  "conAddress": "台北市松山區南京東路四段 2 號",
-  "eventStartDate": "2025/08/15",
-  "eventEndDate": "2025/08/16",
-  "imgBanner": "<Step 4.1 取得的暫存 URL>",
-  "ticketPurchaseMethod": "官網購票、現場購票，每人限購 4 張",
-  "precautions": "禁止攜帶自拍棒、場內禁止錄影、請於開演前 30 分鐘入場",
-  "refundPolicy": "演出前 7 天可全額退票，演出前 3 天內不接受退票申請",
-  "conInfoStatus": "draft",
-  "sessions": [
-    {
-      "sessionDate": "2025/08/15",
-      "sessionStart": "19:00",
-      "sessionEnd": "22:00",
-      "sessionTitle": "第一場：光之序曲",
-      "imgSeattable": "<Step 4.2 取得的暫存座位圖 URL>",
-      "ticketTypes": [
-        {
-          "ticketTypeName": "VIP 席",
-          "entranceType": "VIP 入口",
-          "ticketBenefits": "最佳觀賞位置、演出後專屬簽名會",
-          "ticketRefundPolicy": "演出前 7 天全額退票",
-          "ticketTypePrice": 3800,
-          "totalQuantity": 200,
-          "sellBeginDate": "2025/07/01 10:00",
-          "sellEndDate": "2025/08/14 23:59"
-        },
-        {
-          "ticketTypeName": "一般席",
-          "entranceType": "一般入口",
-          "ticketBenefits": "標準觀賞席位",
-          "ticketRefundPolicy": "演出前 7 天全額退票",
-          "ticketTypePrice": 1800,
-          "totalQuantity": 1000,
-          "sellBeginDate": "2025/07/01 10:00",
-          "sellEndDate": "2025/08/14 23:59"
-        }
-      ]
-    },
-    {
-      "sessionDate": "2025/08/16",
-      "sessionStart": "19:00",
-      "sessionEnd": "22:00",
-      "sessionTitle": "第二場：終章之歌",
-      "imgSeattable": "<另一張暫存座位圖 URL>",
-      "ticketTypes": [
-        {
-          "ticketTypeName": "一般席",
-          "entranceType": "一般入口",
-          "ticketBenefits": "標準觀賞席位",
-          "ticketRefundPolicy": "演出前 7 天全額退票",
-          "ticketTypePrice": 1800,
-          "totalQuantity": 1000,
-          "sellBeginDate": "2025/07/01 10:00",
-          "sellEndDate": "2025/08/14 23:59"
-        }
-      ]
-    }
-  ]
-}
-```
-
 ### 欄位說明
 
 **演唱會基本資料**
@@ -302,7 +242,7 @@ Content-Type: application/json
 | `conAddress` | ✅ | 最長 2000 字 | 完整地址 |
 | `eventStartDate` | ✅ | `yyyy/MM/dd` | 活動開始日期 |
 | `eventEndDate` | ✅ | `yyyy/MM/dd` | 活動結束日期 |
-| `imgBanner` | ✅ | URL | 主視覺圖片 URL |
+| `imgBanner` | ✅ | URL | 主視覺圖片 URL（Step 4 取得） |
 | `ticketPurchaseMethod` | ✅ | 長文字 | 購票方式說明 |
 | `precautions` | ✅ | 長文字 | 注意事項 |
 | `refundPolicy` | ✅ | 長文字 | 退票政策 |
@@ -316,7 +256,7 @@ Content-Type: application/json
 | `sessionStart` | `HH:mm` | 開演時間 |
 | `sessionEnd` | `HH:mm` | 結束時間 |
 | `sessionTitle` | 文字 | 場次名稱 |
-| `imgSeattable` | URL | 座位圖 |
+| `imgSeattable` | URL | 座位圖 URL（Step 4 取得） |
 | `ticketTypes` | 陣列 | 該場次票種清單 |
 
 **票種（ticketTypes）**
@@ -331,6 +271,8 @@ Content-Type: application/json
 | `totalQuantity` | 整數 | 總票數 |
 | `sellBeginDate` | `yyyy/MM/dd HH:mm` | 開賣時間 |
 | `sellEndDate` | `yyyy/MM/dd HH:mm` | 截止販售時間 |
+
+> 具體的 Request Body 範例請參考 [第 10 節：附錄範例情境](#10-附錄範例情境)。
 
 ---
 
@@ -423,9 +365,404 @@ Content-Type: application/json
 □ 3. GET /api/v1/concerts/venues        → 取得 venueId
 □ 3. GET /api/v1/concerts/location-tags → 取得 locationTagId
 □ 3. GET /api/v1/concerts/music-tags    → 取得 musicTagId
-□ 4. POST /api/v1/upload/image (CONCERT_BANNER, 無 targetId) → 取得暫存 URL
+□ 4. 從 Unsplash 下載 Banner 圖片
+□ 4. POST /api/v1/upload/image (CONCERT_BANNER, 無 targetId)       → 取得暫存 URL
 □ 4. POST /api/v1/upload/image (CONCERT_SEATING_TABLE, 無 targetId) → 取得暫存 URL（每場次一次）
 □ 5. POST /api/v1/concerts              → 取得 concertId（草稿）
 □ 6. PUT  /api/v1/concerts/<concertId>  → 填寫完整資料
 □ 7. PUT  /api/v1/concerts/<concertId>/submit → 提交審核
 ```
+
+---
+
+## 10. 附錄：範例情境
+
+以下提供四種不同主題的演唱會範例，每次建立新演唱會時可從中挑選適合的情境做為參考基礎，避免每次填寫相同內容。
+
+---
+
+### 情境 A｜流行音樂演唱會
+
+**Banner 圖片來源：**
+```
+https://images.unsplash.com/photo-1501386761578-eac5c294458a?w=1920&q=80
+```
+
+**PUT /api/v1/concerts/\<concertId\> Request Body：**
+
+```json
+{
+  "organizationId": "<organizationId>",
+  "venueId": "<venueId>",
+  "locationTagId": "<locationTagId>",
+  "musicTagId": "<musicTagId>",
+  "conTitle": "2025 璀璨之夜流行音樂演唱會",
+  "conIntroduction": "年度最受矚目的流行音樂盛典，集結台灣最具人氣的歌手，帶來超過三小時的精彩演出。從抒情到舞曲，從獨唱到合唱，每一首歌都是與觀眾共同的珍貴回憶。",
+  "conLocation": "台北小巨蛋",
+  "conAddress": "台北市松山區南京東路四段 2 號",
+  "eventStartDate": "2025/09/20",
+  "eventEndDate": "2025/09/21",
+  "imgBanner": "<上傳 Unsplash 圖片後取得的暫存 URL>",
+  "ticketPurchaseMethod": "官方網站、便利商店 ibon 機台、現場售票窗口，每人限購 4 張",
+  "precautions": "禁止攜帶專業拍攝器材、自拍棒及外食，請於開演前 30 分鐘完成入場手續",
+  "refundPolicy": "演出前 7 日可申請全額退票，演出前 3 日起不受理退票，特殊情況依主辦方公告辦理",
+  "conInfoStatus": "draft",
+  "sessions": [
+    {
+      "sessionDate": "2025/09/20",
+      "sessionStart": "19:00",
+      "sessionEnd": "22:30",
+      "sessionTitle": "Day 1｜光之序章",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "白金 VIP 席",
+          "entranceType": "VIP 專屬通道",
+          "ticketBenefits": "第一排至第五排優先入座、演前粉絲見面會資格、限定周邊禮包",
+          "ticketRefundPolicy": "演出前 7 日全額退票",
+          "ticketTypePrice": 5800,
+          "totalQuantity": 150,
+          "sellBeginDate": "2025/08/01 10:00",
+          "sellEndDate": "2025/09/19 23:59"
+        },
+        {
+          "ticketTypeName": "搖滾區站席",
+          "entranceType": "A 區入口",
+          "ticketBenefits": "最靠近舞台的站立區，感受現場震撼氛圍",
+          "ticketRefundPolicy": "演出前 7 日全額退票",
+          "ticketTypePrice": 2800,
+          "totalQuantity": 500,
+          "sellBeginDate": "2025/08/01 10:00",
+          "sellEndDate": "2025/09/19 23:59"
+        },
+        {
+          "ticketTypeName": "一般坐席",
+          "entranceType": "B 區入口",
+          "ticketBenefits": "固定座位，視野良好",
+          "ticketRefundPolicy": "演出前 7 日全額退票",
+          "ticketTypePrice": 1800,
+          "totalQuantity": 2000,
+          "sellBeginDate": "2025/08/01 10:00",
+          "sellEndDate": "2025/09/19 23:59"
+        }
+      ]
+    },
+    {
+      "sessionDate": "2025/09/21",
+      "sessionStart": "19:00",
+      "sessionEnd": "22:30",
+      "sessionTitle": "Day 2｜夢的終章",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "搖滾區站席",
+          "entranceType": "A 區入口",
+          "ticketBenefits": "最靠近舞台的站立區",
+          "ticketRefundPolicy": "演出前 7 日全額退票",
+          "ticketTypePrice": 2800,
+          "totalQuantity": 500,
+          "sellBeginDate": "2025/08/01 10:00",
+          "sellEndDate": "2025/09/20 23:59"
+        },
+        {
+          "ticketTypeName": "一般坐席",
+          "entranceType": "B 區入口",
+          "ticketBenefits": "固定座位，視野良好",
+          "ticketRefundPolicy": "演出前 7 日全額退票",
+          "ticketTypePrice": 1800,
+          "totalQuantity": 2000,
+          "sellBeginDate": "2025/08/01 10:00",
+          "sellEndDate": "2025/09/20 23:59"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### 情境 B｜爵士音樂節
+
+**Banner 圖片來源：**
+```
+https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=1920&q=80
+```
+
+**PUT /api/v1/concerts/\<concertId\> Request Body：**
+
+```json
+{
+  "organizationId": "<organizationId>",
+  "venueId": "<venueId>",
+  "locationTagId": "<locationTagId>",
+  "musicTagId": "<musicTagId>",
+  "conTitle": "2025 台北國際爵士音樂節",
+  "conIntroduction": "匯聚來自紐約、巴黎、東京的頂尖爵士樂手，在台北最具歷史感的室外廣場，共同演繹從 Bebop 到 Fusion 的多元爵士風格。聆聽薩克斯風與鋼琴的即興對話，感受爵士樂最純粹的靈魂。",
+  "conLocation": "華山 1914 文化創意產業園區",
+  "conAddress": "台北市中正區八德路一段 1 號",
+  "eventStartDate": "2025/10/04",
+  "eventEndDate": "2025/10/05",
+  "imgBanner": "<上傳 Unsplash 圖片後取得的暫存 URL>",
+  "ticketPurchaseMethod": "官網購票、Kktix 購票平台，現場當日票視剩餘座位開放販售",
+  "precautions": "室外活動請自備雨具，場內禁止吸煙，請勿在演出中途喧嘩影響其他觀眾",
+  "refundPolicy": "演出前 10 日可申請全額退票，10 日內不受理退票",
+  "conInfoStatus": "draft",
+  "sessions": [
+    {
+      "sessionDate": "2025/10/04",
+      "sessionStart": "18:00",
+      "sessionEnd": "21:30",
+      "sessionTitle": "Opening Night — Blue Note Session",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "貴賓席（含調酒一杯）",
+          "entranceType": "貴賓入口",
+          "ticketBenefits": "前排指定座位、入場即享調酒一杯、限定紀念程序冊",
+          "ticketRefundPolicy": "演出前 10 日全額退票",
+          "ticketTypePrice": 2200,
+          "totalQuantity": 80,
+          "sellBeginDate": "2025/09/01 12:00",
+          "sellEndDate": "2025/10/03 18:00"
+        },
+        {
+          "ticketTypeName": "一般入場票",
+          "entranceType": "一般入口",
+          "ticketBenefits": "自由座，建議提早入場選位",
+          "ticketRefundPolicy": "演出前 10 日全額退票",
+          "ticketTypePrice": 900,
+          "totalQuantity": 400,
+          "sellBeginDate": "2025/09/01 12:00",
+          "sellEndDate": "2025/10/03 18:00"
+        }
+      ]
+    },
+    {
+      "sessionDate": "2025/10/05",
+      "sessionStart": "17:00",
+      "sessionEnd": "21:00",
+      "sessionTitle": "Grand Finale — Jazz Fusion Night",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "貴賓席（含調酒一杯）",
+          "entranceType": "貴賓入口",
+          "ticketBenefits": "前排指定座位、入場即享調酒一杯、限定紀念程序冊",
+          "ticketRefundPolicy": "演出前 10 日全額退票",
+          "ticketTypePrice": 2200,
+          "totalQuantity": 80,
+          "sellBeginDate": "2025/09/01 12:00",
+          "sellEndDate": "2025/10/04 17:00"
+        },
+        {
+          "ticketTypeName": "一般入場票",
+          "entranceType": "一般入口",
+          "ticketBenefits": "自由座，建議提早入場選位",
+          "ticketRefundPolicy": "演出前 10 日全額退票",
+          "ticketTypePrice": 900,
+          "totalQuantity": 400,
+          "sellBeginDate": "2025/09/01 12:00",
+          "sellEndDate": "2025/10/04 17:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### 情境 C｜古典交響樂音樂會
+
+**Banner 圖片來源：**
+```
+https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1920&q=80
+```
+
+**PUT /api/v1/concerts/\<concertId\> Request Body：**
+
+```json
+{
+  "organizationId": "<organizationId>",
+  "venueId": "<venueId>",
+  "locationTagId": "<locationTagId>",
+  "musicTagId": "<musicTagId>",
+  "conTitle": "2025 台灣愛樂交響樂團年度音樂會",
+  "conIntroduction": "台灣愛樂交響樂團年度旗艦演出，本屆以「自然的四季」為主題，演繹韋瓦第《四季》、德弗札克《新世界》及台灣作曲家錢南章的全新委創作品。由國際知名指揮家吳承澤執棒，帶領八十位演奏家共同打造一場震撼心靈的音響盛宴。",
+  "conLocation": "國家音樂廳",
+  "conAddress": "台北市中山南路 21-1 號",
+  "eventStartDate": "2025/11/08",
+  "eventEndDate": "2025/11/09",
+  "imgBanner": "<上傳 Unsplash 圖片後取得的暫存 URL>",
+  "ticketPurchaseMethod": "兩廳院售票系統（artsticket.com.tw）、現場售票窗口，每人限購 6 張",
+  "precautions": "正式音樂廳演出，請著正式服裝；開演後謝絕遲到入場；全程禁止錄音錄影；演出中請關閉手機",
+  "refundPolicy": "演出前 14 日可申請全額退票，演出前 7 日內不受理退票申請",
+  "conInfoStatus": "draft",
+  "sessions": [
+    {
+      "sessionDate": "2025/11/08",
+      "sessionStart": "19:30",
+      "sessionEnd": "22:00",
+      "sessionTitle": "首演之夜",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "A 區（一樓前區）",
+          "entranceType": "正廳入口",
+          "ticketBenefits": "最佳聆聽位置，一樓前排中央區",
+          "ticketRefundPolicy": "演出前 14 日全額退票",
+          "ticketTypePrice": 3500,
+          "totalQuantity": 200,
+          "sellBeginDate": "2025/10/01 10:00",
+          "sellEndDate": "2025/11/07 20:00"
+        },
+        {
+          "ticketTypeName": "B 區（一樓後區）",
+          "entranceType": "正廳入口",
+          "ticketBenefits": "一樓後排，視野開闊",
+          "ticketRefundPolicy": "演出前 14 日全額退票",
+          "ticketTypePrice": 2200,
+          "totalQuantity": 300,
+          "sellBeginDate": "2025/10/01 10:00",
+          "sellEndDate": "2025/11/07 20:00"
+        },
+        {
+          "ticketTypeName": "C 區（二樓包廂）",
+          "entranceType": "二樓包廂入口",
+          "ticketBenefits": "包廂席，俯瞰舞台全景",
+          "ticketRefundPolicy": "演出前 14 日全額退票",
+          "ticketTypePrice": 1500,
+          "totalQuantity": 150,
+          "sellBeginDate": "2025/10/01 10:00",
+          "sellEndDate": "2025/11/07 20:00"
+        }
+      ]
+    },
+    {
+      "sessionDate": "2025/11/09",
+      "sessionStart": "14:30",
+      "sessionEnd": "17:00",
+      "sessionTitle": "日場加演",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "A 區（一樓前區）",
+          "entranceType": "正廳入口",
+          "ticketBenefits": "最佳聆聽位置，一樓前排中央區",
+          "ticketRefundPolicy": "演出前 14 日全額退票",
+          "ticketTypePrice": 3500,
+          "totalQuantity": 200,
+          "sellBeginDate": "2025/10/01 10:00",
+          "sellEndDate": "2025/11/08 15:00"
+        },
+        {
+          "ticketTypeName": "B 區（一樓後區）",
+          "entranceType": "正廳入口",
+          "ticketBenefits": "一樓後排，視野開闊",
+          "ticketRefundPolicy": "演出前 14 日全額退票",
+          "ticketTypePrice": 2200,
+          "totalQuantity": 300,
+          "sellBeginDate": "2025/10/01 10:00",
+          "sellEndDate": "2025/11/08 15:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### 情境 D｜電子音樂節
+
+**Banner 圖片來源：**
+```
+https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=1920&q=80
+```
+
+**PUT /api/v1/concerts/\<concertId\> Request Body：**
+
+```json
+{
+  "organizationId": "<organizationId>",
+  "venueId": "<venueId>",
+  "locationTagId": "<locationTagId>",
+  "musicTagId": "<musicTagId>",
+  "conTitle": "FLUX 2025 電子音樂節",
+  "conIntroduction": "FLUX 是台灣最具規模的室內電子音樂盛典，2025 年將帶來來自歐洲、日本與本地的頂尖 DJ 與電子音樂製作人，橫跨 Techno、House、Ambient 三大舞台。沉浸式視聽裝置搭配 360° 環繞音響，帶你體驗超越感官的音樂旅程。",
+  "conLocation": "台北流行音樂中心",
+  "conAddress": "台北市南港區市民大道八段 99 號",
+  "eventStartDate": "2025/12/13",
+  "eventEndDate": "2025/12/14",
+  "imgBanner": "<上傳 Unsplash 圖片後取得的暫存 URL>",
+  "ticketPurchaseMethod": "官網限量預售、Kktix 平台，現場不另售票，售完為止",
+  "precautions": "18 歲以上方可入場（請攜帶證件備查）；禁止攜帶違禁品及危險物品；全場禁止錄影直播；保留拒絕特定人士入場之權利",
+  "refundPolicy": "所有票券一經售出概不退票，如遇不可抗力因素取消，主辦方將全額退款",
+  "conInfoStatus": "draft",
+  "sessions": [
+    {
+      "sessionDate": "2025/12/13",
+      "sessionStart": "20:00",
+      "sessionEnd": "06:00",
+      "sessionTitle": "Night 1 — TECHNO REALM",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "Early Bird 票（限量）",
+          "entranceType": "主入口",
+          "ticketBenefits": "優惠早鳥票，與一般票享有相同入場權益",
+          "ticketRefundPolicy": "不退票",
+          "ticketTypePrice": 1200,
+          "totalQuantity": 200,
+          "sellBeginDate": "2025/10/15 12:00",
+          "sellEndDate": "2025/11/15 23:59"
+        },
+        {
+          "ticketTypeName": "一般單日票",
+          "entranceType": "主入口",
+          "ticketBenefits": "Night 1 全場無限暢遊三大舞台",
+          "ticketRefundPolicy": "不退票",
+          "ticketTypePrice": 1800,
+          "totalQuantity": 1500,
+          "sellBeginDate": "2025/11/16 12:00",
+          "sellEndDate": "2025/12/12 23:59"
+        },
+        {
+          "ticketTypeName": "雙日通行票",
+          "entranceType": "主入口",
+          "ticketBenefits": "Night 1 & Night 2 雙日無限入場，含專屬休息室使用權",
+          "ticketRefundPolicy": "不退票",
+          "ticketTypePrice": 3000,
+          "totalQuantity": 500,
+          "sellBeginDate": "2025/10/15 12:00",
+          "sellEndDate": "2025/12/12 23:59"
+        }
+      ]
+    },
+    {
+      "sessionDate": "2025/12/14",
+      "sessionStart": "20:00",
+      "sessionEnd": "06:00",
+      "sessionTitle": "Night 2 — HOUSE & AMBIENT",
+      "imgSeattable": "<座位圖暫存 URL>",
+      "ticketTypes": [
+        {
+          "ticketTypeName": "一般單日票",
+          "entranceType": "主入口",
+          "ticketBenefits": "Night 2 全場無限暢遊三大舞台",
+          "ticketRefundPolicy": "不退票",
+          "ticketTypePrice": 1800,
+          "totalQuantity": 1500,
+          "sellBeginDate": "2025/11/16 12:00",
+          "sellEndDate": "2025/12/13 23:59"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+> 以上四個情境提供不同音樂類型、不同場地規模與票種結構的完整範例。實際使用時，請將 `organizationId`、`venueId`、`locationTagId`、`musicTagId` 替換為查詢 API 取得的真實 ID，並將 `imgBanner` 與 `imgSeattable` 替換為上傳後取得的暫存 URL。
