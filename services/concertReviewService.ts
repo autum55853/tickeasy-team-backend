@@ -1,7 +1,8 @@
 import { AppDataSource } from '../config/database.js';
 import { Concert } from '../models/concert.js';
 import { ConcertReview, ReviewType } from '../models/concert-review.js';
-import openAIService, { AIReviewResponse } from './openaiService.js';
+// [OpenAI] import openAIService, { AIReviewResponse } from './openaiService.js';
+import geminiService, { AIReviewResponse } from './geminiService.js';
 import { ReviewStatus } from '../models/concert.js'; // Assuming ReviewStatus is exported from concert.ts
 import { ApiError } from '../utils/index.js';
 import { DeepPartial } from 'typeorm';
@@ -62,7 +63,8 @@ export class ConcertReviewService {
     }
     
     console.log(`正在為演唱會 ${concertId} 觸發 AI 審核...`);
-    const aiResponse = await openAIService.reviewConcert(concert);
+    // [OpenAI] const aiResponse = await openAIService.reviewConcert(concert);
+    const aiResponse = await geminiService.reviewConcert(concert);
     console.log(`AI 審核完成，演唱會 ${concertId}，結果：`, aiResponse.approved ? '通過' : '未通過/需人工');
 
     const reviewData: DeepPartial<ConcertReview> = {

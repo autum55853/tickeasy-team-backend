@@ -60,7 +60,7 @@ export class SupportSession {
   @Column({ type: 'timestamp', nullable: true })
   firstResponseAt: Date;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
   @Column({ type: 'timestamp', nullable: true })

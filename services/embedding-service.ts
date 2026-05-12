@@ -1,21 +1,31 @@
 /**
  * 向量嵌入服務
- * 使用 OpenAI Embeddings API 將文本轉換為向量
+ * 使用 Gemini text-embedding-004 將文本轉換為向量（768 維）
+ *
+ * [OpenAI 原實作說明]
+ * 原本使用 OpenAI text-embedding-3-small（1536 維）。
+ * 已改用 Gemini text-embedding-004（768 維）。
+ * 向量以 JSONB 儲存，不需 DB schema migration，
+ * 但切換後需執行 updateKnowledgeBaseEmbeddings() 重生所有現有向量。
  */
 
-import OpenAI from 'openai';
+// [OpenAI] import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AppDataSource } from '../config/database.js';
 import { SupportKnowledgeBase } from '../models/support-knowledge-base.js';
 
 export class EmbeddingService {
-  private openai: OpenAI;
-  private readonly EMBEDDING_MODEL = 'text-embedding-3-small'; // 經濟高效的模型
-  private readonly EMBEDDING_DIMENSIONS = 1536; // 向量維度
+  // [OpenAI] private openai: OpenAI;
+  private genAI: GoogleGenerativeAI;
+
+  // [OpenAI] private readonly EMBEDDING_MODEL = 'text-embedding-3-small'; // 1536 維
+  // [OpenAI] private readonly EMBEDDING_DIMENSIONS = 1536;
+  private readonly EMBEDDING_MODEL = 'text-embedding-004'; // Gemini embedding 模型
+  private readonly EMBEDDING_DIMENSIONS = 768;             // Gemini text-embedding-004 最大維度
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    // [OpenAI] this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
   /**
@@ -23,23 +33,25 @@ export class EmbeddingService {
    */
   async generateEmbedding(text: string): Promise<number[]> {
     try {
-      // 清理和準備文本
       const cleanText = this.preprocessText(text);
-      
+
       if (!cleanText || cleanText.length < 5) {
         throw new Error('文本太短，無法生成有意義的嵌入');
       }
 
-      const response = await this.openai.embeddings.create({
-        model: this.EMBEDDING_MODEL,
-        input: cleanText,
-        dimensions: this.EMBEDDING_DIMENSIONS
-      });
+      // [OpenAI] const response = await this.openai.embeddings.create({
+      // [OpenAI]   model: this.EMBEDDING_MODEL,
+      // [OpenAI]   input: cleanText,
+      // [OpenAI]   dimensions: this.EMBEDDING_DIMENSIONS
+      // [OpenAI] });
+      // [OpenAI] const embedding = response.data[0].embedding;
 
-      const embedding = response.data[0].embedding;
-      
+      const embeddingModel = this.genAI.getGenerativeModel({ model: this.EMBEDDING_MODEL });
+      const result = await embeddingModel.embedContent(cleanText);
+      const embedding = result.embedding.values;
+
       if (!embedding || embedding.length === 0) {
-        throw new Error('OpenAI 返回空的嵌入向量');
+        throw new Error('Gemini 返回空的嵌入向量');
       }
 
       return embedding;
@@ -55,18 +67,25 @@ export class EmbeddingService {
   async generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
     try {
       const cleanTexts = texts.map(text => this.preprocessText(text)).filter(text => text.length >= 5);
-      
+
       if (cleanTexts.length === 0) {
         return [];
       }
 
-      const response = await this.openai.embeddings.create({
-        model: this.EMBEDDING_MODEL,
-        input: cleanTexts,
-        dimensions: this.EMBEDDING_DIMENSIONS
-      });
+      // [OpenAI] const response = await this.openai.embeddings.create({
+      // [OpenAI]   model: this.EMBEDDING_MODEL,
+      // [OpenAI]   input: cleanTexts,
+      // [OpenAI]   dimensions: this.EMBEDDING_DIMENSIONS
+      // [OpenAI] });
+      // [OpenAI] return response.data.map(item => item.embedding);
 
-      return response.data.map(item => item.embedding);
+      const embeddingModel = this.genAI.getGenerativeModel({ model: this.EMBEDDING_MODEL });
+      const batchResult = await embeddingModel.batchEmbedContents({
+        requests: cleanTexts.map(text => ({
+          content: { role: 'user', parts: [{ text }] }
+        }))
+      });
+      return batchResult.embeddings.map(e => e.values);
     } catch (error: any) {
       console.error('❌ 批量生成嵌入向量失敗:', error);
       throw new Error(`批量嵌入生成失敗: ${error.message}`);
@@ -74,7 +93,7 @@ export class EmbeddingService {
   }
 
   /**
-   * 計算兩個向量的餘弦相似度
+   * 計算兩個向量的餘弦相似度（純數學運算，不依賴 AI API）
    */
   calculateCosineSimilarity(vecA: number[], vecB: number[]): number {
     if (vecA.length !== vecB.length) {
@@ -107,16 +126,15 @@ export class EmbeddingService {
   private preprocessText(text: string): string {
     return text
       .trim()
-      .replace(/\\s+/g, ' ') // 合併多個空格
-      .replace(/[\\n\\r\\t]/g, ' ') // 移除換行符和制表符
-      .substring(0, 8000); // 限制長度避免 API 限制
+      .replace(/\\s+/g, ' ')
+      .replace(/[\\n\\r\\t]/g, ' ')
+      .substring(0, 8000);
   }
 
   /**
    * 為知識庫項目生成嵌入
    */
   async generateKnowledgeBaseEmbedding(knowledgeBase: SupportKnowledgeBase): Promise<number[]> {
-    // 結合標題、內容和標籤生成綜合嵌入
     const combinedText = [
       knowledgeBase.title,
       knowledgeBase.content,
@@ -126,14 +144,13 @@ export class EmbeddingService {
     return await this.generateEmbedding(combinedText);
   }
 
-
-
   /**
    * 批量更新知識庫的嵌入向量
+   * 注意：切換 AI 供應商後（維度從 1536 → 768），需執行此方法重生所有向量。
    */
   async updateKnowledgeBaseEmbeddings(): Promise<{ updated: number; failed: number }> {
     console.log('🔄 開始批量更新知識庫嵌入向量...');
-    
+
     const knowledgeBaseRepo = AppDataSource.getRepository(SupportKnowledgeBase);
     const knowledgeBases = await knowledgeBaseRepo.find({
       where: { isActive: true }
@@ -154,15 +171,12 @@ export class EmbeddingService {
         failed++;
       }
 
-      // 避免 API 速率限制
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     console.log(`🎉 知識庫嵌入向量更新完成: ${updated} 成功, ${failed} 失敗`);
     return { updated, failed };
   }
-
-
 
   /**
    * 獲取嵌入向量的統計信息
@@ -175,11 +189,11 @@ export class EmbeddingService {
 
     const [knowledgeBaseTotal, knowledgeBaseWithEmbeddings] = await Promise.all([
       knowledgeBaseRepo.count({ where: { isActive: true } }),
-      knowledgeBaseRepo.count({ 
-        where: { 
+      knowledgeBaseRepo.count({
+        where: {
           isActive: true,
-          embeddingVector: 'NOT NULL' as any // TypeORM 查詢 NOT NULL
-        } 
+          embeddingVector: 'NOT NULL' as any
+        }
       })
     ]);
 
@@ -193,7 +207,8 @@ export class EmbeddingService {
    * 快速檢查 API Key 是否存在（不進行實際 API 調用）
    */
   hasApiKey(): boolean {
-    return Boolean(process.env.OPENAI_API_KEY);
+    // [OpenAI] return Boolean(process.env.OPENAI_API_KEY);
+    return Boolean(process.env.GEMINI_API_KEY);
   }
 
   /**
@@ -201,13 +216,12 @@ export class EmbeddingService {
    */
   async isServiceAvailable(): Promise<boolean> {
     try {
-      // 先檢查 API Key 是否存在
-      if (!process.env.OPENAI_API_KEY) {
-        console.warn('⚠️  OpenAI API Key 未設定');
+      // [OpenAI] if (!process.env.OPENAI_API_KEY) { ... }
+      if (!process.env.GEMINI_API_KEY) {
+        console.warn('⚠️  Gemini API Key 未設定');
         return false;
       }
 
-      // 簡單測試嵌入服務
       const testEmbedding = await this.generateEmbedding('測試文本');
       return testEmbedding.length > 0;
     } catch (error: any) {
@@ -217,5 +231,4 @@ export class EmbeddingService {
   }
 }
 
-// 創建單例實例
 export const embeddingService = new EmbeddingService();

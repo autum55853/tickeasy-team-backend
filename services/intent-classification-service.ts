@@ -3,7 +3,8 @@
  * 負責分析用戶查詢的真實意圖並路由到對應的處理服務
  */
 
-import openaiService from './openaiService.js';
+// [OpenAI] import openaiService from './openaiService.js';
+import geminiService from './geminiService.js';
 
  
 // 支援的意圖類型
@@ -103,7 +104,8 @@ export class IntentClassificationService {
 - 要考慮整個句子的語境，不只是關鍵詞匹配
 - 信心度要保守估計，不確定時降低信心度`;
 
-    const aiResponse = await openaiService.getChatCompletion([
+    // [OpenAI] const aiResponse = await openaiService.getChatCompletion([
+    const aiResponse = await geminiService.getChatCompletion([
       {
         role: 'user',
         content: prompt

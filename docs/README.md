@@ -13,6 +13,7 @@
 | 認證 | JWT + Passport.js (Google OAuth 2.0) |
 | 圖片儲存 | Multer + Sharp + Supabase Storage / AWS S3 |
 | 郵件 | Nodemailer (Gmail + Google OAuth2) |
+| AI | Google Gemini 2.0 Flash（內容審核、智慧客服、Embedding） |
 | 金流 | 綠界 ECPay |
 | 測試 | Jest + Supertest |
 | Lint | ESLint + TypeScript-ESLint |
@@ -34,6 +35,8 @@ npm run migrate
 # 4. 啟動開發伺服器
 npm run dev
 ```
+
+> **首次部署後**：呼叫 `POST /api/v1/knowledge-base/embeddings/update`（需 Admin token）重生知識庫 Embedding 向量（Gemini 768 維）。
 
 伺服器預設啟動於 `http://localhost:3000`，API 根路徑為 `/api/v1/`。
 

@@ -43,10 +43,10 @@ export class Venue {
   @Column({ type: 'boolean', default: false })
   hasTransit: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
   
   @OneToMany('Concert', (concert: Concert) => concert.venue)

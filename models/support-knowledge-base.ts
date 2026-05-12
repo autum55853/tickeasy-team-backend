@@ -60,10 +60,10 @@ export class SupportKnowledgeBase {
   @Column({ type: 'integer', default: 0 })
   notHelpfulCount: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
   // 虛擬屬性：檢查是否有嵌入向量

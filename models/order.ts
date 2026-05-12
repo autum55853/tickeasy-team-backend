@@ -85,10 +85,10 @@ export class Order {
   @Column({ type: 'varchar', length: 255, nullable: true })
   invoiceUrl: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ nullable: true })
+  @UpdateDateColumn({ type: 'timestamptz', nullable: true })
   updatedAt?: Date;
   
   @OneToMany('Ticket', 'order')

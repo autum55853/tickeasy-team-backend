@@ -59,10 +59,10 @@ export class ConcertReview {
   @Column({ type: 'text', nullable: true })
   reviewerNote: string; // 審核者補充備註
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
   /**

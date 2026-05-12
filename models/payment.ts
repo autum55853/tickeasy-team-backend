@@ -60,10 +60,10 @@ export class Payment {
   @Column({ type: 'jsonb', nullable: true })
   rawPayload: object;
   
-  @CreateDateColumn({ nullable: false })
+  @CreateDateColumn({ type: 'timestamptz', nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn({ nullable: true })
+  @UpdateDateColumn({ type: 'timestamptz', nullable: true })
   updatedAt?: Date;
 
   @Column({ type: 'varchar', length: 50, nullable: true })

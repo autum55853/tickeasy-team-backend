@@ -1,15 +1,7 @@
-/* ============================================================
- * [OpenAI - 已停用] OpenAIService
- * 已由 services/geminiService.ts 取代（改用 Gemini 2.0 Flash）。
- * 保留此檔案供對照與回滾參考。
- * 若需回滾：將 concertReviewService.ts 與 intent-classification-service.ts
- * 的 import 改回 './openaiService.js'，並恢復 OPENAI_API_KEY 環境變數。
- * ============================================================ */
-import OpenAI from 'openai';
+import { GoogleGenerativeAI, Content } from '@google/generative-ai';
 import { Concert } from '../models/concert.js';
 import reviewRulesService, { ReviewCriteria } from './reviewRulesService.js';
 
-// AI 審核回應的標準格式
 export interface AIReviewResponse {
   approved: boolean;
   confidence: number;
@@ -22,31 +14,34 @@ export interface AIReviewResponse {
   error?: string;
 }
 
-const OPENAI_MODEL = 'gpt-4o-mini';
-const OPENAI_MAX_TOKENS = 2000;
-const OPENAI_TEMPERATURE = 0.2;
+// OpenAI 相容的訊息格式（保持介面一致，方便切換）
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
 
-export class OpenAIService {
-  private openai: OpenAI;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MAX_TOKENS = 2000;
+const GEMINI_TEMPERATURE = 0.2;
+
+export class GeminiService {
+  private genAI!: GoogleGenerativeAI;
   private isInitialized: boolean = false;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.warn('OPENAI_API_KEY 環境變數未設定，OpenAIService 將無法正常運作。AI 審核功能將停用。');
+      console.warn('GEMINI_API_KEY 環境變數未設定，GeminiService 將無法正常運作。AI 功能將停用。');
       this.isInitialized = false;
-      this.openai = new OpenAI({ apiKey: 'DUMMY_KEY_DO_NOT_USE_OR_THROW_ERROR' });
-      console.log('[OpenAIService Constructor] OpenAI API Key 未設定。服務未初始化。');
-    } else {
-      try {
-        this.openai = new OpenAI({ apiKey });
-        this.isInitialized = true;
-        console.log('[OpenAIService Constructor] OpenAI Service 初始化成功。');
-      } catch (initError: any) {
-        console.error('[OpenAIService Constructor] 初始化 OpenAI client 失敗:', initError);
-        this.isInitialized = false;
-        this.openai = new OpenAI({ apiKey: undefined });
-      }
+      return;
+    }
+    try {
+      this.genAI = new GoogleGenerativeAI(apiKey);
+      this.isInitialized = true;
+      console.log('[GeminiService Constructor] Gemini Service 初始化成功。');
+    } catch (initError: any) {
+      console.error('[GeminiService Constructor] 初始化 Gemini client 失敗:', initError);
+      this.isInitialized = false;
     }
   }
 
@@ -54,7 +49,6 @@ export class OpenAIService {
     return this.isInitialized;
   }
 
-  // 最簡單的 System Prompt
   private getSystemPrompt(): string {
     return `請嚴格按照以下 JSON 格式提供您的審核結果，不要包含任何額外文字或解釋。
 所有欄位都必須存在。
@@ -70,39 +64,61 @@ export class OpenAIService {
   }
 
   /**
-   * 通用聊天完成 API
-   * @param messages 聊天訊息陣列
-   * @param options 額外選項，如 model, temperature
-   * @returns AI 模型的回應字串
+   * 通用聊天完成 API（相容 OpenAI 訊息格式）
+   * - system role → Gemini systemInstruction
+   * - assistant role → Gemini 'model' role
    */
   async getChatCompletion(
-    messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+    messages: ChatMessage[],
     options: { model?: string; temperature?: number } = {}
   ): Promise<string> {
     if (!this.isInitialized) {
-      console.warn('OpenAI Service 未初始化，無法取得聊天回覆。');
+      console.warn('Gemini Service 未初始化，無法取得聊天回覆。');
       return 'AI服務目前無法使用，請稍後再試。';
     }
 
     try {
-      // [OpenAI] openai.chat.completions.create → 已改用 geminiService.getChatCompletion
-      const response = await this.openai.chat.completions.create({
-        model: options.model || OPENAI_MODEL,
-        messages,
-        temperature: options.temperature === undefined ? OPENAI_TEMPERATURE : options.temperature,
-        max_tokens: OPENAI_MAX_TOKENS,
+      const systemMessages = messages.filter(m => m.role === 'system');
+      const nonSystemMessages = messages.filter(m => m.role !== 'system');
+      const systemInstruction = systemMessages.map(m => m.content).join('\n') || undefined;
+
+      const model = this.genAI.getGenerativeModel({
+        model: GEMINI_MODEL,
+        ...(systemInstruction ? { systemInstruction } : {}),
+        generationConfig: {
+          temperature: options.temperature ?? GEMINI_TEMPERATURE,
+          maxOutputTokens: GEMINI_MAX_TOKENS,
+        }
       });
 
-      return response.choices[0].message.content || '';
+      if (nonSystemMessages.length === 0) {
+        return 'AI服務目前無法使用，請稍後再試。';
+      }
+
+      const lastMsg = nonSystemMessages[nonSystemMessages.length - 1];
+      const historyMessages = nonSystemMessages.slice(0, -1);
+
+      if (historyMessages.length === 0) {
+        const result = await model.generateContent(lastMsg.content);
+        return result.response.text();
+      }
+
+      // 有歷史訊息時使用 chat 模式（Gemini 僅支援 user/model 交替）
+      const history: Content[] = historyMessages.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+
+      const chat = model.startChat({ history });
+      const result = await chat.sendMessage(lastMsg.content);
+      return result.response.text();
     } catch (error: any) {
-      console.error('❌ 與 OpenAI API 互動失敗:', error);
-      throw new Error(`OpenAI API 錯誤: ${error.message}`);
+      console.error('❌ 與 Gemini API 互動失敗:', error);
+      throw new Error(`Gemini API 錯誤: ${error.message}`);
     }
   }
 
-  // 建立 User Prompt
   private buildReviewPrompt(concert: Concert, criteria: ReviewCriteria): string {
-    // 輔助函數，用於安全地格式化日期
     const formatDate = (dateValue: any): string => {
       if (!dateValue) return '未提供';
       let dateObj: Date | null = null;
@@ -130,7 +146,6 @@ export class OpenAIService {
     prompt += `注意事項: ${concert.precautions || '未提供'}\n`;
     prompt += `退票政策: ${concert.refundPolicy || '未提供'}\n\n`;
 
-    // 場次和票種資訊
     if (concert.sessions && concert.sessions.length > 0) {
       prompt += '== 場次與票種資訊 ==\n';
       concert.sessions.forEach((session, sIndex) => {
@@ -157,14 +172,13 @@ export class OpenAIService {
       prompt += '此演唱會目前未設定任何場次資訊。\n\n';
     }
 
-    // 新增日期邏輯分析段落
     const now = new Date();
     const eventStart = concert.eventStartDate ? new Date(concert.eventStartDate) : null;
     const eventEnd = concert.eventEndDate ? new Date(concert.eventEndDate) : null;
 
     prompt += '== 日期邏輯分析 ==\n';
     prompt += `當前時間: ${now.toISOString()}\n`;
-    
+
     if (eventStart && eventEnd) {
       const eventDuration = Math.ceil((eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24));
       const isEventInFuture = eventStart > now;
@@ -175,40 +189,32 @@ export class OpenAIService {
       prompt += '活動期間: 未完整設定\n';
     }
 
-    // 分析每個場次的時間邏輯
     if (concert.sessions && concert.sessions.length > 0) {
       prompt += '\n各場次時間分析:\n';
       concert.sessions.forEach((session, index) => {
         const sessionDate = session.sessionDate ? new Date(session.sessionDate) : null;
-        
+
         if (sessionDate) {
-          const isInEventPeriod = eventStart && eventEnd ? 
+          const isInEventPeriod = eventStart && eventEnd ?
             (sessionDate >= eventStart && sessionDate <= eventEnd) : false;
           const isFuture = sessionDate > now;
           const hoursFromNow = Math.round((sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-          
+
           prompt += `場次 ${index + 1} (${session.sessionTitle || '未命名'}):\n`;
           prompt += `  - 演出日期: ${formatDate(session.sessionDate)}\n`;
           prompt += `  - 是否在活動期間內: ${isInEventPeriod ? '是' : '否'}\n`;
           prompt += `  - 是否為未來時間: ${isFuture ? '是' : '否'}\n`;
           prompt += `  - 距離現在: ${hoursFromNow} 小時\n`;
-          
-          // 計算演出持續時間
+
           if (session.sessionStart && session.sessionEnd) {
             const startTime = new Date(`1970-01-01T${session.sessionStart}`);
             const endTime = new Date(`1970-01-01T${session.sessionEnd}`);
             let duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-            
-            // 處理跨日情況
-            if (duration < 0) {
-              duration += 24;
-            }
-            
+            if (duration < 0) duration += 24;
             prompt += `  - 演出時長: ${duration.toFixed(1)} 小時\n`;
             prompt += `  - 時段: ${session.sessionStart} - ${session.sessionEnd}\n`;
           }
-          
-          // 售票時間分析
+
           if (session.ticketTypes && session.ticketTypes.length > 0) {
             session.ticketTypes.forEach((ticket, ticketIndex) => {
               if (ticket.sellBeginDate && ticket.sellEndDate) {
@@ -217,7 +223,7 @@ export class OpenAIService {
                 const sellDuration = Math.ceil((sellEnd.getTime() - sellStart.getTime()) / (1000 * 60 * 60 * 24));
                 const sellEndBeforeEvent = sellEnd <= sessionDate;
                 const sellStartInPast = sellStart <= now;
-                
+
                 prompt += `  票種 ${ticketIndex + 1} (${ticket.ticketTypeName || '未命名'}) 售票分析:\n`;
                 prompt += `    - 售票期間: ${sellDuration} 天\n`;
                 prompt += `    - 售票開始: ${formatDate(ticket.sellBeginDate)} ${sellStartInPast ? '(已開始)' : '(未開始)'}\n`;
@@ -232,10 +238,8 @@ export class OpenAIService {
         prompt += '\n';
       });
     }
-    
-    prompt += '\n';
 
-    // 審核標準提示
+    prompt += '\n';
     prompt += '== 審核標準與重點 ==\n';
     if (criteria.checkInformationCompleteness) {
       prompt += '- 資訊完整性：檢查上述所有欄位是否都已提供且內容清晰、無矛盾之處。\n';
@@ -251,8 +255,6 @@ export class OpenAIService {
       const pricingConfig = reviewRulesService.getPricingConfig();
       prompt += `- 價格合理性：檢查各票種價格是否在市場普遍接受的範圍內（${pricingConfig.minPrice} - ${pricingConfig.maxPrice} TWD）。\n`;
     }
-    
-    // 新增日期相關審核標準
     if (criteria.checkDateLogic) {
       prompt += '- 日期邏輯檢查：\n';
       prompt += '  * 活動結束日期必須晚於或等於開始日期\n';
@@ -260,13 +262,11 @@ export class OpenAIService {
       prompt += '  * 場次結束時間必須晚於開始時間\n';
       prompt += '  * 演出持續時間要合理（建議30分鐘-8小時）\n';
     }
-    
     if (criteria.checkFutureEvents) {
       prompt += '- 未來活動檢查：\n';
       prompt += '  * 所有演出日期必須是未來時間（至少距離現在24小時）\n';
       prompt += '  * 活動不能是已過期的歷史活動\n';
     }
-    
     if (criteria.checkTicketSaleLogic) {
       prompt += '- 售票時間邏輯：\n';
       prompt += '  * 售票結束時間必須晚於售票開始時間\n';
@@ -274,59 +274,55 @@ export class OpenAIService {
       prompt += '  * 售票期間至少要有合理長度（建議3天以上）\n';
       prompt += '  * 售票開始時間不能是過去時間\n';
     }
-    
     if (criteria.checkSessionSchedule) {
       prompt += '- 場次時間安排：\n';
       prompt += '  * 同一天多場次之間要有合理間隔（建議至少2小時）\n';
       prompt += '  * 演出時間要在合理時段內（建議8:00-23:00）\n';
       prompt += '  * 場次時間不能重疊或過於接近\n';
     }
-    
+
     prompt += '\n請提供您的審核結果。確保您的回應完全符合系統提示中定義的 JSON 結構，特別是 "summary" 欄位必須包含對審核的簡要總結。';
     return prompt;
   }
 
-  // 呼叫 OpenAI API 進行審核
-  async reviewConcert(
-    concert: Concert,
-    criteria?: ReviewCriteria
-  ): Promise<AIReviewResponse> {
-    console.log(`[OpenAIService reviewConcert] 開始審核演唱會 ID: ${concert.concertId}`);
+  async reviewConcert(concert: Concert, criteria?: ReviewCriteria): Promise<AIReviewResponse> {
+    console.log(`[GeminiService reviewConcert] 開始審核演唱會 ID: ${concert.concertId}`);
     if (!this.isServiceAvailable) {
-      console.error(`[OpenAIService reviewConcert] OpenAI 服務未初始化或 API Key 無效。演唱會 ID: ${concert.concertId}`);
-      return this.getFallbackResponse('OpenAI 服務未初始化，API Key 未設定或無效。');
+      console.error(`[GeminiService reviewConcert] Gemini 服務未初始化。演唱會 ID: ${concert.concertId}`);
+      return this.getFallbackResponse('Gemini 服務未初始化，API Key 未設定或無效。');
     }
 
     const reviewCriteria = criteria || reviewRulesService.getReviewCriteria();
-    console.log('[OpenAIService reviewConcert] 使用的審核標準:', reviewCriteria);
+    console.log('[GeminiService reviewConcert] 使用的審核標準:', reviewCriteria);
 
     try {
       const prompt = this.buildReviewPrompt(concert, reviewCriteria);
-      console.log(`[OpenAIService reviewConcert] 建立的 Prompt (前 100 字元): ${prompt.substring(0,100)}...`);
+      console.log(`[GeminiService reviewConcert] 建立的 Prompt (前 100 字元): ${prompt.substring(0, 100)}...`);
+      console.log(`[GeminiService reviewConcert] 準備呼叫 Gemini API。模型: ${GEMINI_MODEL}`);
 
-      console.log(`[OpenAIService reviewConcert] 準備呼叫 OpenAI API。模型: ${OPENAI_MODEL}, 溫度: ${OPENAI_TEMPERATURE}, Max Tokens: ${OPENAI_MAX_TOKENS}`);
-      // [OpenAI] openai.chat.completions.create with response_format: json_object → 已改用 geminiService.reviewConcert（Gemini 用 responseMimeType: 'application/json'）
-      const completion = await this.openai.chat.completions.create({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: 'system', content: this.getSystemPrompt() },
-          { role: 'user', content: prompt },
-        ],
-        temperature: OPENAI_TEMPERATURE,
-        max_tokens: OPENAI_MAX_TOKENS,
-        response_format: { type: 'json_object' },
+      // 使用 responseMimeType: 'application/json' 確保回傳純 JSON（Gemini 原生支援）
+      const model = this.genAI.getGenerativeModel({
+        model: GEMINI_MODEL,
+        systemInstruction: this.getSystemPrompt(),
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: GEMINI_TEMPERATURE,
+          maxOutputTokens: GEMINI_MAX_TOKENS,
+        }
       });
 
-      const responseContent = completion.choices[0]?.message?.content;
+      const result = await model.generateContent(prompt);
+      const responseContent = result.response.text();
+
       if (!responseContent) {
-        console.error(`[OpenAIService reviewConcert] OpenAI API 回應內容為空。演唱會 ID: ${concert.concertId}, API 回應:`, completion);
-        return this.getFallbackResponse('OpenAI API 回應內容為空');
+        console.error(`[GeminiService reviewConcert] Gemini API 回應內容為空。演唱會 ID: ${concert.concertId}`);
+        return this.getFallbackResponse('Gemini API 回應內容為空');
       }
-      console.log(`[OpenAIService reviewConcert] 收到 OpenAI API 回應。演唱會 ID: ${concert.concertId}`);
+      console.log(`[GeminiService reviewConcert] 收到 Gemini API 回應。演唱會 ID: ${concert.concertId}`);
 
       try {
         const aiResult = JSON.parse(responseContent) as Partial<AIReviewResponse>;
-        console.log(`[OpenAIService reviewConcert] 成功解析 OpenAI JSON 回應。演唱會 ID: ${concert.concertId}`, aiResult);
+        console.log(`[GeminiService reviewConcert] 成功解析 Gemini JSON 回應。演唱會 ID: ${concert.concertId}`, aiResult);
         return {
           approved: aiResult.approved ?? false,
           confidence: aiResult.confidence ?? 0,
@@ -338,27 +334,18 @@ export class OpenAIService {
           rawResponse: aiResult,
         };
       } catch (parseError: any) {
-        console.error(`[OpenAIService reviewConcert] 解析 OpenAI JSON 回應失敗。演唱會 ID: ${concert.concertId}, 錯誤:`, parseError, `回應內容: ${responseContent}`);
-        return this.getFallbackResponse('解析 OpenAI JSON 回應失敗', { errorDetails: parseError.message, responseContent });
+        console.error(`[GeminiService reviewConcert] 解析 Gemini JSON 回應失敗。演唱會 ID: ${concert.concertId}`, parseError);
+        return this.getFallbackResponse('解析 Gemini JSON 回應失敗', { errorDetails: parseError.message, responseContent });
       }
     } catch (error: any) {
-      let errorMessage = 'AI 審核服務發生未知錯誤';
-      if (error instanceof OpenAI.APIError) {
-        console.error(`[OpenAIService reviewConcert] OpenAI API 錯誤。演唱會 ID: ${concert.concertId}, Status: ${error.status}, Type: ${error.type}, Message: ${error.message}`, error);
-        errorMessage = `OpenAI API 錯誤 (Status: ${error.status}, Type: ${error.type}): ${error.message}`;
-      } else if (error.message) {
-        console.error(`[OpenAIService reviewConcert] AI 審核服務發生非 API 錯誤。演唱會 ID: ${concert.concertId}, 錯誤訊息: ${error.message}`, error);
-        errorMessage = error.message;
-      } else {
-        console.error(`[OpenAIService reviewConcert] AI 審核服務發生未知錯誤且無錯誤訊息。演唱會 ID: ${concert.concertId}`, error);
-      }
+      const errorMessage = error.message || 'AI 審核服務發生未知錯誤';
+      console.error(`[GeminiService reviewConcert] 錯誤。演唱會 ID: ${concert.concertId}`, error);
       return this.getFallbackResponse(errorMessage, error);
     }
   }
 
-  // 降級回應
   private getFallbackResponse(errorMessage: string, rawError?: any): AIReviewResponse {
-    console.warn(`[OpenAIService getFallbackResponse] 觸發降級回應: ${errorMessage}`, rawError);
+    console.warn(`[GeminiService getFallbackResponse] 觸發降級回應: ${errorMessage}`, rawError);
     return {
       approved: false,
       confidence: 0,
@@ -370,33 +357,29 @@ export class OpenAIService {
     };
   }
 
-  // 測試 OpenAI API 連線
   async testConnection(): Promise<{ success: boolean; message: string; data?: any }> {
-    console.log('[OpenAIService testConnection] 開始測試 OpenAI API 連線...');
+    console.log('[GeminiService testConnection] 開始測試 Gemini API 連線...');
     if (!this.isServiceAvailable) {
-      console.error('[OpenAIService testConnection] OpenAI Service 未初始化 (API Key 問題)，測試無法執行。');
-      return { success: false, message: 'OpenAI Service 未初始化 (API Key 問題)' };
+      return { success: false, message: 'Gemini Service 未初始化 (API Key 問題)' };
     }
     try {
-      // [OpenAI] openai.chat.completions.create（連線測試）→ 已改用 geminiService.testConnection
-      const completion = await this.openai.chat.completions.create({
-        model: OPENAI_MODEL,
-        messages: [{ role: 'user', content: '請僅回覆 "測試成功" 四個字，不要包含其他任何標點或文字。' }],
-        max_tokens: 10,
-        temperature: 0,
+      const model = this.genAI.getGenerativeModel({
+        model: GEMINI_MODEL,
+        generationConfig: { maxOutputTokens: 10, temperature: 0 }
       });
-      const responseText = completion.choices[0]?.message?.content;
+      const result = await model.generateContent('請僅回覆 "測試成功" 四個字，不要包含其他任何標點或文字。');
+      const responseText = result.response.text().trim();
       if (responseText === '測試成功') {
-        console.log('[OpenAIService testConnection] OpenAI API 連接測試成功！');
-        return { success: true, message: 'OpenAI API 連接測試成功！' };
+        console.log('[GeminiService testConnection] Gemini API 連接測試成功！');
+        return { success: true, message: 'Gemini API 連接測試成功！' };
       }
-      console.warn(`[OpenAIService testConnection] OpenAI API 測試未達預期回應: ${responseText}`, completion);
-      return { success: false, message: `OpenAI API 測試未達預期回應: ${responseText}`, data: completion };
+      console.warn(`[GeminiService testConnection] Gemini API 測試未達預期回應: ${responseText}`);
+      return { success: false, message: `Gemini API 測試未達預期回應: ${responseText}` };
     } catch (error: any) {
-      console.error(`[OpenAIService testConnection] OpenAI API 連接測試失敗: ${error.message}`, error);
-      return { success: false, message: `OpenAI API 連接測試失敗: ${error.message}`, data: error };
+      console.error(`[GeminiService testConnection] Gemini API 連接測試失敗: ${error.message}`, error);
+      return { success: false, message: `Gemini API 連接測試失敗: ${error.message}`, data: error };
     }
   }
 }
 
-export default new OpenAIService();
+export default new GeminiService();

@@ -72,7 +72,7 @@ export class SupportMessage {
   @Column({ type: 'boolean', default: false })
   isRead: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
   // 虛擬屬性：檢查是否為用戶訊息
