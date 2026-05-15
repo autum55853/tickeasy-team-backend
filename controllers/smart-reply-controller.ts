@@ -631,14 +631,18 @@ export class SmartReplyController {
       // 簡化健康檢查，避免調用不存在的方法
       const chatServiceStatus = await chatService.checkServiceStatus();
 
-      const status = {
-        smartReplyService: 'healthy', // 假設如果能執行到這裡就是健康的
-        openaiResponsesApi: chatServiceStatus ? 'healthy' : 'unhealthy',
-        database: 'healthy', // 如果能執行到這裡，資料庫應該是正常的
+      const status: Record<string, unknown> = {
+        smartReplyService: 'healthy',
+        geminiApi: chatServiceStatus.ok ? 'healthy' : 'unhealthy',
+        database: 'healthy',
         timestamp: new Date().toISOString()
       };
 
-      const isHealthy = chatServiceStatus;
+      if (!chatServiceStatus.ok && chatServiceStatus.error) {
+        status.geminiError = chatServiceStatus.error;
+      }
+
+      const isHealthy = chatServiceStatus.ok;
 
       res.status(isHealthy ? 200 : 503).json({
         success: isHealthy,
@@ -654,7 +658,7 @@ export class SmartReplyController {
         error: error.message,
         data: {
           smartReplyService: 'unknown',
-          openaiResponsesApi: 'unknown',
+          geminiApi: 'unknown',
           database: 'unhealthy',
           timestamp: new Date().toISOString()
         }

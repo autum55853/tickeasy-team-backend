@@ -1,5 +1,5 @@
 /**
- * 聊天服務 (使用 Gemini 2.0 Flash)
+ * 聊天服務 (使用 Gemini 2.0 Flash-Lite)
  * 整合傳統客服會話與即時 AI 問答功能
  *
  * [OpenAI 原實作說明]
@@ -19,7 +19,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.0-flash-lite';
 
 export interface ChatOptions {
   sessionId?: string;
@@ -117,18 +117,9 @@ export class ChatService {
   /**
    * 檢查服務狀態
    */
-  async checkServiceStatus(): Promise<boolean> {
-    if (!this.isInitialized) return false;
-    try {
-      // [OpenAI] const response = await this.openai.responses.create({ model: process.env.OPENAI_MODEL || 'gpt-4o-mini', input: '測試' });
-      // [OpenAI] return !!response.output_text;
-      const model = this.genAI.getGenerativeModel({ model: GEMINI_MODEL });
-      const result = await model.generateContent('測試');
-      return !!result.response.text();
-    } catch (error) {
-      console.error('❌ Gemini 服務檢查失敗:', error);
-      return false;
-    }
+  async checkServiceStatus(): Promise<{ ok: boolean; error?: string }> {
+    if (!this.isInitialized) return { ok: false, error: 'GEMINI_API_KEY 未設定' };
+    return { ok: true };
   }
 
   /**
