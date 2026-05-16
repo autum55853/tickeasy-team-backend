@@ -118,6 +118,10 @@ throw ApiError.validation('表單驗證失敗', {
 | `CLEANUP_INTERVAL_HOURS` | 每幾小時執行一次清理 | 否 | 6 |
 | `GEMINI_API_KEY` | Gemini AI API Key（取代 OpenAI，用於 AI 審核 / 智慧客服 / Embedding） | 否 | — |
 | `OPENAI_API_KEY` | ~~已棄用~~ — 原 OpenAI API Key，已由 `GEMINI_API_KEY` 取代 | 否 | — |
+| `DISCORD_BOT_TOKEN` | Discord Bot Token，用於傳送審核訊息至頻道 | 否（Discord 功能） | — |
+| `DISCORD_CHANNEL_ID` | Discord 目標頻道 ID | 否（Discord 功能） | — |
+| `DISCORD_PUBLIC_KEY` | Discord 應用程式 Ed25519 公鑰，用於驗證 Interaction 簽名 | 否（Discord 功能） | — |
+| `DISCORD_APPLICATION_ID` | Discord 應用程式 ID，用於 PATCH Interaction 訊息（deferred response） | 否（Discord 功能） | — |
 
 ## 常見陷阱
 
