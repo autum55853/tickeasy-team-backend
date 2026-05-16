@@ -12,6 +12,7 @@ export interface AIReviewResponse {
   requiresManualReview: boolean;
   rawResponse?: any;
   error?: string;
+  quotaExhausted?: boolean;
 }
 
 // OpenAI 相容的訊息格式（保持介面一致，方便切換）
@@ -340,6 +341,19 @@ export class GeminiService {
     } catch (error: any) {
       const errorMessage = error.message || 'AI 審核服務發生未知錯誤';
       console.error(`[GeminiService reviewConcert] 錯誤。演唱會 ID: ${concert.concertId}`, error);
+
+      const isQuotaExhausted =
+        error?.status === 429 ||
+        error?.httpStatus === 429 ||
+        (typeof errorMessage === 'string' && errorMessage.includes('RESOURCE_EXHAUSTED'));
+
+      if (isQuotaExhausted) {
+        console.warn(`[GeminiService reviewConcert] Gemini API 配額耗盡 (429)，演唱會 ID: ${concert.concertId}`);
+        const fallback = this.getFallbackResponse('Gemini API 配額耗盡 (RESOURCE_EXHAUSTED)');
+        fallback.quotaExhausted = true;
+        return fallback;
+      }
+
       return this.getFallbackResponse(errorMessage, error);
     }
   }

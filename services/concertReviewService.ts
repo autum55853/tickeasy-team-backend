@@ -4,6 +4,7 @@ import { ConcertReview, ReviewType } from '../models/concert-review.js';
 // [OpenAI] import openAIService, { AIReviewResponse } from './openaiService.js';
 import geminiService, { AIReviewResponse } from './geminiService.js';
 import { ReviewStatus } from '../models/concert.js'; // Assuming ReviewStatus is exported from concert.ts
+import { sendConcertReviewRequest } from './discordService.js';
 import { ApiError } from '../utils/index.js';
 import { DeepPartial } from 'typeorm';
 
@@ -65,6 +66,24 @@ export class ConcertReviewService {
     console.log(`正在為演唱會 ${concertId} 觸發 AI 審核...`);
     // [OpenAI] const aiResponse = await openAIService.reviewConcert(concert);
     const aiResponse = await geminiService.reviewConcert(concert);
+
+    // 配額耗盡：轉送 Discord 人工審核
+    if (aiResponse.quotaExhausted) {
+      console.warn(`[ConcertReviewService] Gemini 配額耗盡，演唱會 ${concertId} 轉送 Discord`);
+      await sendConcertReviewRequest(concert);
+      const pendingReview = this.concertReviewRepository.create({
+        concertId,
+        reviewType: 'manual_system' as ReviewType,
+        reviewStatus: ReviewStatus.PENDING,
+        reviewNote: 'Gemini API 配額耗盡，已傳送至 Discord 等待人工審核',
+      });
+      await this.concertReviewRepository.save(pendingReview);
+      concert.reviewStatus = ReviewStatus.PENDING;
+      concert.reviewNote = 'Gemini API 配額耗盡，等待 Discord 人工審核';
+      await this.concertRepository.save(concert);
+      return pendingReview;
+    }
+
     console.log(`AI 審核完成，演唱會 ${concertId}，結果：`, aiResponse.approved ? '通過' : '未通過/需人工');
 
     const reviewData: DeepPartial<ConcertReview> = {
