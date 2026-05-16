@@ -11,7 +11,7 @@ interface DiscordEmbed {
   timestamp: string;
 }
 
-interface DiscordWebhookPayload {
+interface DiscordMessagePayload {
   content: string;
   embeds: DiscordEmbed[];
   components: object[];
@@ -66,13 +66,15 @@ function buildConcertEmbed(concert: Concert): DiscordEmbed {
 }
 
 export async function sendConcertReviewRequest(concert: Concert): Promise<void> {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) {
-    console.warn('[DiscordService] DISCORD_WEBHOOK_URL 未設定，無法傳送 Discord 通知');
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const channelId = process.env.DISCORD_CHANNEL_ID;
+
+  if (!botToken || !channelId) {
+    console.warn('[DiscordService] DISCORD_BOT_TOKEN 或 DISCORD_CHANNEL_ID 未設定，無法傳送 Discord 通知');
     return;
   }
 
-  const payload: DiscordWebhookPayload = {
+  const payload: DiscordMessagePayload = {
     content: '**Gemini API 配額耗盡**，以下演唱會需要人工審核：',
     embeds: [buildConcertEmbed(concert)],
     components: [
@@ -96,7 +98,11 @@ export async function sendConcertReviewRequest(concert: Concert): Promise<void> 
     ],
   };
 
-  await axios.post(webhookUrl, payload);
+  await axios.post(
+    `https://discord.com/api/v10/channels/${channelId}/messages`,
+    payload,
+    { headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' } },
+  );
   console.log(`[DiscordService] 演唱會 ${concert.concertId} 審核請求已傳送至 Discord`);
 }
 
