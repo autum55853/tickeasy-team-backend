@@ -144,6 +144,37 @@ bin/server.ts
 | DELETE | `/:organizationId` | isAuthenticated | 刪除組織（限擁有者） |
 | GET | `/:organizationId/concerts` | isAuthenticated | 取得組織的演唱會列表（分頁、篩選、排序） |
 
+### 智慧客服 `/api/v1/smart-reply`
+
+| 方法 | 路徑 | 認證 | 說明 |
+|------|------|------|------|
+| POST | `/reply` | — | 智能回覆（`message`、`enableAI?`） |
+| POST | `/test` | — | 測試關鍵字匹配 |
+| GET | `/health` | — | Gemini 服務健康檢查 |
+| POST | `/session/start` | optionalAuth | 開始新客服會話 |
+| POST | `/session/:sessionId/message` | optionalAuth | 發送訊息（後續對話，DB 重建歷史） |
+| GET | `/session/:sessionId/history` | optionalAuth | 取得會話歷史 |
+| POST | `/session/:sessionId/transfer` | optionalAuth | 申請人工轉接 |
+| POST | `/session/:sessionId/close` | optionalAuth | 關閉會話 |
+
+### 知識庫 `/api/v1/knowledge-base`
+
+| 方法 | 路徑 | 認證 | 說明 |
+|------|------|------|------|
+| GET | `/search?q=` | — | 語意搜尋（Gemini Embedding 768 維） |
+| GET | `/suggestions?q=` | — | 查詢建議 |
+| GET | `/stats` | — | 統計資訊 |
+| GET | `/embedding-status` | — | Embedding 服務狀態 |
+| POST | `/test-search` | — | 測試語意相似度 |
+| GET | `/health` | — | 健康檢查 |
+| GET | `/` | isAuthenticated | 知識庫列表（分頁、分類、篩選） |
+| GET | `/:id` | isAuthenticated | 單一項目詳情 |
+| GET | `/:id/similar` | isAuthenticated | 相似內容 |
+| POST | `/` | adminAuth | 建立知識庫項目 |
+| PUT | `/:id` | adminAuth | 更新知識庫項目 |
+| DELETE | `/:id` | adminAuth | 刪除知識庫項目 |
+| POST | `/embeddings/update` | adminAuth | 批量重生所有知識庫向量 |
+
 ## 統一回應格式
 
 成功：

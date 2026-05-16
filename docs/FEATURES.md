@@ -318,3 +318,80 @@
 查詢條件同時過濾 `ticketId` 與 `userId`。票券不存在（含不屬於當前用戶）→ 404 D01
 
 **回傳資料**：票券狀態、QR Code、演唱會名稱/地點、場次日期、訂單編號、購票時間、票種名稱/價格、主辦方組織資訊
+
+---
+
+## 8. AI 智慧客服模組
+
+底層使用 Gemini 2.0 Flash；意圖分類採關鍵字優先、AI 降級的雙層策略。
+
+### 8.1 智能回覆 `POST /api/v1/smart-reply/reply`
+
+無需認證。
+
+**必填**：`message`（string）  
+**選填**：`enableAI`（boolean，預設 false）
+
+**業務邏輯**：
+1. 意圖分類（關鍵字匹配 → 選填 AI 增強）
+2. 命中知識庫語意搜尋（Gemini `text-embedding-004`，768 維）
+3. `enableAI=true` 時呼叫 Gemini 生成自然語言回覆，否則直接回傳知識庫摘要
+
+### 8.2 會話管理
+
+| 方法 | 路徑 | 認證 | 說明 |
+|------|------|------|------|
+| POST | `/session/start` | optionalAuth | 開始新客服會話（支援匿名） |
+| POST | `/session/:sessionId/message` | optionalAuth + checkSessionAccess | 發送訊息（後續對話從 DB 重建最近 10 則歷史） |
+| GET | `/session/:sessionId/history` | optionalAuth + checkSessionAccess | 取得會話歷史 |
+| POST | `/session/:sessionId/transfer` | optionalAuth + checkSessionAccess | 申請人工轉接 |
+| POST | `/session/:sessionId/close` | optionalAuth + checkSessionAccess | 關閉會話 |
+
+**後續對話（continueChat）**：載入最近 10 則 `SupportMessage`，映射為 Gemini `Content[]`，透過 `model.startChat({ history }).sendMessage()` 維持上下文記憶。不再依賴 OpenAI Responses API `responseId`。
+
+### 8.3 健康檢查 `GET /api/v1/smart-reply/health`
+
+回傳 Gemini 服務狀態（`GEMINI_API_KEY` 缺失時 `isAvailable: false`，不報錯）。
+
+---
+
+## 9. 演唱會 AI 審核
+
+`POST /api/v1/concerts/:concertId/submit-review`（需 isAuthenticated）
+
+**業務邏輯**：
+1. 取得演唱會完整資料
+2. 呼叫 `geminiService.reviewConcert(concert)`（`responseMimeType: 'application/json'`）
+3. 回傳 `AIReviewResponse`：`{ approved: boolean, score: number, reason: string, suggestions: string[] }`
+
+---
+
+## 10. 知識庫模組
+
+### 10.1 公開端點
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/api/v1/knowledge-base/search?q=` | 語意搜尋（Gemini Embedding，768 維），支援 `limit`、`threshold`、`categories` |
+| GET | `/api/v1/knowledge-base/suggestions?q=` | 取得查詢建議 |
+| GET | `/api/v1/knowledge-base/stats` | 知識庫統計（公開） |
+| GET | `/api/v1/knowledge-base/embedding-status` | Embedding 服務狀態 |
+| POST | `/api/v1/knowledge-base/test-search` | 測試語意搜尋相似度 |
+| GET | `/api/v1/knowledge-base/health` | 健康檢查 |
+
+### 10.2 需認證端點
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/api/v1/knowledge-base` | 取得知識庫列表（支援分頁、分類、關鍵字篩選） |
+| GET | `/api/v1/knowledge-base/:id` | 取得單一項目 |
+| GET | `/api/v1/knowledge-base/:id/similar` | 尋找相似內容 |
+
+### 10.3 管理員端點（adminAuth）
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| POST | `/api/v1/knowledge-base` | 建立知識庫項目（title、content 必填，category / tags / isActive 選填） |
+| PUT | `/api/v1/knowledge-base/:id` | 更新知識庫項目（partial update） |
+| DELETE | `/api/v1/knowledge-base/:id` | 刪除知識庫項目 |
+| POST | `/api/v1/knowledge-base/embeddings/update` | 批量重生所有知識庫向量（切換 Embedding 模型後執行） |

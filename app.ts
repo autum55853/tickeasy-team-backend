@@ -28,6 +28,7 @@ import paymentRoute from './routes/payment.js';
 import sessionRoute from './routes/session.js';
 import knowledgeBaseRoute from './routes/knowledge-base.js';
 import smartReplyRoute from './routes/smart-reply.js';
+import discordRouter from './routes/discord.js';
 
 
 import healthRouter from './routes/health.js';
@@ -113,6 +114,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(morgan('dev'));
+
+// Discord Interactions 路由必須在 express.json() 前掛載，以取得原始 Buffer 供 Ed25519 簽名驗證
+app.use('/api/v1/discord', discordRouter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
