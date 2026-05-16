@@ -106,4 +106,20 @@ export async function sendConcertReviewRequest(concert: Concert): Promise<void> 
   console.log(`[DiscordService] 演唱會 ${concert.concertId} 審核請求已傳送至 Discord`);
 }
 
-export default { verifyDiscordSignature, sendConcertReviewRequest };
+export async function patchInteractionResponse(
+  interactionToken: string,
+  payload: { content: string; components: object[] },
+): Promise<void> {
+  const appId = process.env.DISCORD_APPLICATION_ID;
+  if (!appId) {
+    console.warn('[DiscordService] DISCORD_APPLICATION_ID 未設定，無法更新互動訊息');
+    return;
+  }
+  await axios.patch(
+    `https://discord.com/api/v10/webhooks/${appId}/${interactionToken}/messages/@original`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
+export default { verifyDiscordSignature, sendConcertReviewRequest, patchInteractionResponse };

@@ -18,6 +18,11 @@
   - 需在 GitHub Secrets 設定 `DISCORD_WEBHOOK`（Discord 頻道 Webhook URL）
 
 ### 修復
+- **[2026-05-16] Discord 審核按鈕點擊顯示「此交互失敗」**
+  - **根本原因**：`discordController.ts` 在送回 HTTP 回應前先 `await concertReviewService.submitManualReview()`，DB 操作耗時 2.4s+，加上網路延遲超過 Discord Interaction 3 秒 deadline。
+  - **修復**：改用 Deferred Response 模式——按鈕點擊後立即回應 `{ type: 6 }` (DEFERRED_UPDATE_MESSAGE)，再異步執行審核，完成後呼叫 `patchInteractionResponse()` PATCH `/webhooks/{APPLICATION_ID}/{token}/messages/@original` 更新訊息。
+  - **新增環境變數**：`DISCORD_APPLICATION_ID`（Discord Developer Portal → Application → General Information）。
+
 - **[2026-05-11] Google OAuth 登入 — `redirect_uri_mismatch` / 已封鎖存取權**
   - **根本原因**：後端同時使用兩個 Google 服務（Gmail 寄信 + OAuth 登入），但 `config/passport.ts` 與 `utils/email.ts` 共用同一組 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` 環境變數，導致 OAuth 登入送出 Gmail 的 Client ID，與 Google Cloud Console 登記 redirect URI 的 OAuth client 不符。
   - **修復**：拆開兩組 env var——OAuth 登入改用 `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_CALLBACK_URL`；Gmail 寄信改用 `GOOGLE_GMAIL_CLIENT_ID` / `GOOGLE_GMAIL_CLIENT_SECRET`。部署時須確認 `GOOGLE_OAUTH_CLIENT_ID` 對應的 Google Cloud Console OAuth client 已登記正確的 redirect URI。

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { verifyDiscordSignature } from '../services/discordService.js';
+import { verifyDiscordSignature, patchInteractionResponse } from '../services/discordService.js';
 import concertReviewService from '../services/concertReviewService.js';
 import { ReviewStatus } from '../models/concert.js';
 
@@ -43,37 +43,33 @@ export async function handleDiscordInteraction(req: Request, res: Response): Pro
     const discordUserId: string = interaction.member?.user?.id ?? interaction.user?.id ?? 'system:discord';
     const note = `Discord 管理員審核：${action === 'approve' ? '批准發布' : '拒絕'}（user: ${discordUserId}）`;
 
-    try {
-      await concertReviewService.submitManualReview(
-        concertId,
-        `discord:${discordUserId}`,
-        reviewStatus,
-        note,
-        'manual_system',
-      );
+    // 立即回應 Discord（type 6 = DEFERRED_UPDATE_MESSAGE），避免超過 3 秒 deadline
+    res.json({ type: 6 });
 
+    const interactionToken: string = interaction.token;
+
+    // 異步處理審核，完成後 PATCH 更新 Discord 訊息
+    concertReviewService.submitManualReview(
+      concertId,
+      `discord:${discordUserId}`,
+      reviewStatus,
+      note,
+      'manual_system',
+    ).then(async () => {
       const resultText = action === 'approve'
         ? '✅ 演唱會已批准發布'
         : '❌ 演唱會已拒絕';
-
-      // type 7 = UPDATE_MESSAGE，移除按鈕
-      res.json({
-        type: 7,
-        data: {
-          content: `${resultText}（Concert ID: \`${concertId}\`）`,
-          components: [],
-        },
+      await patchInteractionResponse(interactionToken, {
+        content: `${resultText}（Concert ID: \`${concertId}\`）`,
+        components: [],
       });
-    } catch (err: any) {
+    }).catch(async (err: any) => {
       console.error('[DiscordController] 處理審核按鈕失敗:', err);
-      res.json({
-        type: 4,
-        data: {
-          content: `❗ 審核處理失敗：${err.message || '未知錯誤'}`,
-          flags: 64, // EPHEMERAL
-        },
+      await patchInteractionResponse(interactionToken, {
+        content: `❗ 審核處理失敗：${err.message || '未知錯誤'}`,
+        components: [],
       });
-    }
+    });
     return;
   }
 
