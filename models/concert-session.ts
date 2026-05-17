@@ -5,11 +5,12 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
+  BeforeInsert,
   ManyToOne,
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 import { TicketType } from './ticket-type.js';
 import { Concert } from './concert.js';
 
@@ -50,6 +51,11 @@ export class ConcertSession {
   @Column({ type: 'text', nullable: true })
   imgSeattable: string; // 只會有一張
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getTaiwanTime();
+  }
 }

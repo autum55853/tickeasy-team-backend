@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
+import { getTaiwanTime } from '../utils/date.js';
 import { TicketType as TicketTypeEntity} from '../models/ticket-type.js';
 import { Ticket as TicketEntity} from '../models/ticket.js';
 import { ConcertSession as ConcertSessionEntity} from '../models/concert-session.js';
@@ -50,7 +51,7 @@ export const getECpayurl = handleErrorAsync(async (req: Request, res: Response<A
   }
 
   // 檢查訂單是否過期
-  const now = new Date();
+  const now = getTaiwanTime();
   if (now > selectedOrder.lockExpireTime) {
     throw ApiError.orderExpired(selectedOrder.orderId);
   }
@@ -146,7 +147,6 @@ export const getECpayurl = handleErrorAsync(async (req: Request, res: Response<A
     amount: TotalAmount,
     currency: 'TWD',
     transactionId: MerchantTradeNo,
-    createdAt: new Date(),
   });
   
   await PaymentRepository.save(paymentRecord);
@@ -241,9 +241,9 @@ export const getECpayReturn = handleErrorAsync(async (req: Request, res: Respons
 
     const isSuccess = raw.RtnCode === '1';
     payment.status = isSuccess ? 'completed' : 'failed';
-    payment.paidAt = raw.PaymentDate ? new Date(raw.PaymentDate) : new Date();
+    payment.paidAt = raw.PaymentDate ? new Date(raw.PaymentDate) : getTaiwanTime();
     payment.rawPayload = raw;
-    payment.updatedAt = new Date();
+    payment.updatedAt = getTaiwanTime();
     payment.tradeNo = raw.TradeNo;
 
 
@@ -273,7 +273,7 @@ export const getECpayReturn = handleErrorAsync(async (req: Request, res: Respons
       }
 
       order.orderStatus = 'paid';
-      order.updatedAt = new Date();
+      order.updatedAt = getTaiwanTime();
       await OrderRepository.save(order);
       // // console.log(`訂單 ${order.orderId} 狀態已更新為 paid`);
 
@@ -309,7 +309,7 @@ export const getECpayReturn = handleErrorAsync(async (req: Request, res: Respons
           userId: order.userId,
           ticketTypeId: order.ticketTypeId,
           status: 'purchased',
-          purchaseTime: new Date(),
+          purchaseTime: getTaiwanTime(),
           concertStartTime: session.sessionDate,
           purchaserName: order.purchaserName,
           purchaserEmail: order.purchaserEmail,

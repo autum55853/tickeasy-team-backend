@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database.js';
 import { Order } from '../models/order.js';
 import { TicketType as TicketTypeEntity } from '../models/ticket-type.js';
 import { LessThan } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 
 /**
  * 每天定時檢查：所有場次結束 → 將演唱會設為 finished
@@ -18,7 +19,7 @@ export async function scheduleOrderExpiredJobs() {
   const orderRepo = AppDataSource.getRepository(Order);
   const ticketTypeRepo = AppDataSource.getRepository(TicketTypeEntity);
 
-  const now = new Date();
+  const now = getTaiwanTime();
 
   // 1. 找出所有逾期且仍為 held 的訂單
   const expiredOrders = await orderRepo.find({

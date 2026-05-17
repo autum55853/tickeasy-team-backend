@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, BeforeInsert } from 'typeorm';
 import { User } from './user.js';
+import { getTaiwanTime } from '../utils/date.js';
 
  
 export enum SenderType {
@@ -72,8 +73,13 @@ export class SupportMessage {
   @Column({ type: 'boolean', default: false })
   isRead: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getTaiwanTime();
+  }
 
   // 虛擬屬性：檢查是否為用戶訊息
   get isFromUser(): boolean {

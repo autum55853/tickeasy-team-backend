@@ -1,14 +1,15 @@
 /**
  * 組織/公司模型
  */
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  CreateDateColumn,
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  BeforeInsert,
   ManyToOne,
   JoinColumn
 } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 
 // 避免直接導入 User 類型，使用接口代替
 interface UserRef {
@@ -48,6 +49,11 @@ export class Organization {
   @Column({ type: 'varchar', length: 200, nullable: true })
   orgWebsite: string;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
-} 
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getTaiwanTime();
+  }
+}

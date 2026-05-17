@@ -5,12 +5,13 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
+  BeforeInsert,
   ManyToOne,
   JoinColumn,
   OneToMany,
 } from 'typeorm';
 import { ConcertSession } from './concert-session.js';
+import { getTaiwanTime } from '../utils/date.js';
 // import { Concert } from './concert.js';
 
 @Entity('ticketType')
@@ -55,8 +56,13 @@ export class TicketType {
   @Column({ type: 'timestamp', nullable: true })
   sellEndDate: Date;
 
-  @CreateDateColumn({ type: 'timestamptz', nullable: false })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getTaiwanTime();
+  }
 
   @OneToMany('Order', 'ticketType')
   orders: any[];

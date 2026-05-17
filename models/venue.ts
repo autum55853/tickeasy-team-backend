@@ -1,14 +1,15 @@
 /**
  * 場地模型
  */
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  CreateDateColumn,
-  UpdateDateColumn,
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  BeforeInsert,
+  BeforeUpdate,
   OneToMany
 } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 import type { Concert } from './concert.js';
 
 @Entity('venues')
@@ -43,11 +44,22 @@ export class Venue {
   @Column({ type: 'boolean', default: false })
   hasTransit: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   updatedAt: Date;
+
+  @BeforeInsert()
+  setTimestamps() {
+    this.createdAt = getTaiwanTime();
+    this.updatedAt = getTaiwanTime();
+  }
+
+  @BeforeUpdate()
+  updateTimestamp() {
+    this.updatedAt = getTaiwanTime();
+  }
   
   @OneToMany('Concert', (concert: Concert) => concert.venue)
   concerts: Concert[];

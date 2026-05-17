@@ -7,6 +7,7 @@ import {
 } from '../utils/email.js';
 import { IsNull, Not, MoreThan } from 'typeorm';
 import { AppDataSource } from '../config/database.js';
+import { getTaiwanTime } from '../utils/date.js';
 import {
     RegisterRequest,
     LoginRequest,
@@ -393,7 +394,7 @@ export const verifyEmail = async (
             where: {
                 email,
                 verificationToken: Not(IsNull()),
-                verificationTokenExpires: MoreThan(new Date()),
+                verificationTokenExpires: MoreThan(getTaiwanTime()),
             },
         });
 
@@ -470,11 +471,11 @@ export const resendVerification = async (
         const lastAttempt = user.lastVerificationAttempt;
         if (
             lastAttempt &&
-            new Date().getTime() - lastAttempt.getTime() < 10 * 60 * 1000
+            getTaiwanTime().getTime() - lastAttempt.getTime() < 10 * 60 * 1000
         ) {
             const remainingSeconds = Math.ceil(
                 (10 * 60 * 1000 -
-                    (new Date().getTime() - lastAttempt.getTime())) /
+                    (getTaiwanTime().getTime() - lastAttempt.getTime())) /
                     1000
             );
             throw ApiError.rateLimitExceeded(remainingSeconds);
@@ -488,8 +489,8 @@ export const resendVerification = async (
 
         // 直接更新用戶數據
         user.verificationToken = code;
-        user.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10分鐘
-        user.lastVerificationAttempt = new Date();
+        user.verificationTokenExpires = new Date(getTaiwanTime().getTime() + 10 * 60 * 1000);
+        user.lastVerificationAttempt = getTaiwanTime();
 
         // 保存到數據庫
         await userRepository.save(user);
@@ -534,11 +535,11 @@ export const requestPasswordReset = async (
         const lastAttempt = user.lastPasswordResetAttempt;
         if (
             lastAttempt &&
-            new Date().getTime() - lastAttempt.getTime() < 10 * 60 * 1000
+            getTaiwanTime().getTime() - lastAttempt.getTime() < 10 * 60 * 1000
         ) {
             const remainingSeconds = Math.ceil(
                 (10 * 60 * 1000 -
-                    (new Date().getTime() - lastAttempt.getTime())) /
+                    (getTaiwanTime().getTime() - lastAttempt.getTime())) /
                     1000
             );
             throw ApiError.rateLimitExceeded(remainingSeconds);
@@ -615,7 +616,7 @@ export const resetPassword = async (
             where: {
                 email,
                 passwordResetToken: Not(IsNull()),
-                passwordResetExpires: MoreThan(new Date()),
+                passwordResetExpires: MoreThan(getTaiwanTime()),
             },
         });
 

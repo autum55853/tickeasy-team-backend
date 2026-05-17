@@ -5,12 +5,13 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
 import { ReviewStatus } from './concert.js';
+import { getTaiwanTime } from '../utils/date.js';
 
 export type ReviewType = 'ai_auto' | 'manual_admin' | 'manual_system';
 
@@ -59,11 +60,22 @@ export class ConcertReview {
   @Column({ type: 'text', nullable: true })
   reviewerNote: string; // 審核者補充備註
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   updatedAt: Date;
+
+  @BeforeInsert()
+  setTimestamps() {
+    this.createdAt = getTaiwanTime();
+    this.updatedAt = getTaiwanTime();
+  }
+
+  @BeforeUpdate()
+  updateTimestamp() {
+    this.updatedAt = getTaiwanTime();
+  }
 
   /**
    * 檢查是否為 AI 審核
