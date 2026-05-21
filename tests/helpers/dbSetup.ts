@@ -5,16 +5,11 @@ beforeAll(async () => {
     try {
       await AppDataSource.initialize();
     } catch (err: any) {
-      // app.ts 可能已在背景初始化，「already initialized」可安全忽略
       if (!AppDataSource.isInitialized) {
         throw err;
       }
     }
   }
-}, 60000); // Supabase 免費方案冷啟動可能需 30-60 秒
+}, 60000);
 
-afterAll(async () => {
-  if (AppDataSource.isInitialized) {
-    await AppDataSource.destroy();
-  }
-});
+// 不在每個 suite 結束時 destroy，連線清理由 jest forceExit 處理

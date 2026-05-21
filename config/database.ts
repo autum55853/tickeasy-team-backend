@@ -4,6 +4,22 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import * as net from 'net';
 import { SocksClient } from 'socks';
+import { User } from '../models/user.js';
+import { Organization } from '../models/organization.js';
+import { Concert } from '../models/concert.js';
+import { ConcertSession } from '../models/concert-session.js';
+import { ConcertReview } from '../models/concert-review.js';
+import { TicketType } from '../models/ticket-type.js';
+import { Ticket } from '../models/ticket.js';
+import { Order } from '../models/order.js';
+import { Payment } from '../models/payment.js';
+import { Venue } from '../models/venue.js';
+import { LocationTag } from '../models/location-tag.js';
+import { MusicTag } from '../models/music-tag.js';
+import { SupportKnowledgeBase } from '../models/support-knowledge-base.js';
+import { SupportSession } from '../models/support-session.js';
+import { SupportMessage } from '../models/support-message.js';
+import { SupportSchedule } from '../models/support-schedule.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,8 +136,14 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'postgres',
   synchronize: false,
   logging: process.env.NODE_ENV === 'development' ? ['error'] : false,
-  entities: [path.join(__dirname, '..', 'models', '*.{ts,js}')],
-  migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
+  entities: [
+    User, Organization, Concert, ConcertSession, ConcertReview,
+    TicketType, Ticket, Order, Payment, Venue, LocationTag, MusicTag,
+    SupportKnowledgeBase, SupportSession, SupportMessage, SupportSchedule,
+  ],
+  migrations: process.env.NODE_ENV === 'test'
+    ? []
+    : [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
   subscribers: [],
   extra,
 });

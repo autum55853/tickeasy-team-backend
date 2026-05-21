@@ -5,6 +5,7 @@ import app from '../app.js';
 import { AppDataSource } from '../config/database.js';
 import { Concert } from '../models/concert.js';
 import { TicketType } from '../models/ticket-type.js';
+import { ConcertSession } from '../models/concert-session.js';
 import { User } from '../models/user.js';
 import { Organization } from '../models/organization.js';
 import { Venue } from '../models/venue.js';
@@ -96,13 +97,13 @@ afterAll(async () => {
 
   // 按照 FK 依賴順序刪除
   if (createdConcertIds.length > 0) {
-    await AppDataSource.getRepository(TicketType).delete(
-      createdConcertIds.map(id => ({ concert: { concertId: id } })).reduce(
-        (_, curr) => curr, {} as any
-      )
-    );
     for (const id of createdConcertIds) {
       await AppDataSource.getRepository(TicketType)
+        .createQueryBuilder()
+        .delete()
+        .where('"concertSessionId" IN (SELECT "sessionId" FROM "concertSession" WHERE "concertId" = :id)', { id })
+        .execute();
+      await AppDataSource.getRepository(ConcertSession)
         .createQueryBuilder()
         .delete()
         .where('"concertId" = :id', { id })
