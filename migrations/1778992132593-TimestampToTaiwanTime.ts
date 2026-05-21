@@ -8,7 +8,7 @@ export class TimestampToTaiwanTime1778992132593 implements MigrationInterface {
         await queryRunner.query('ALTER TABLE "supportSession" DROP CONSTRAINT IF EXISTS "supportSession_satisfactionRating_check"');
         await queryRunner.query('ALTER TABLE "supportKnowledgeBase" DROP CONSTRAINT IF EXISTS "CK_supportKnowledgeBase_priority"');
         await queryRunner.query('ALTER TABLE "supportKnowledgeBase" DROP CONSTRAINT IF EXISTS "CK_supportKnowledgeBase_replyType"');
-        await queryRunner.query('ALTER TABLE "supportSchedule" ADD "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()');
+        await queryRunner.query('ALTER TABLE "supportSchedule" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()');
         await queryRunner.query('ALTER TABLE "venues" ADD CONSTRAINT "PK_57b9556731ee08376830177b81f" PRIMARY KEY ("venueId")');
         await queryRunner.query('ALTER TABLE "venues" ALTER COLUMN "isAccessible" SET NOT NULL');
         await queryRunner.query('ALTER TABLE "venues" ALTER COLUMN "hasParking" SET NOT NULL');
@@ -324,7 +324,6 @@ export class TimestampToTaiwanTime1778992132593 implements MigrationInterface {
         await queryRunner.query('ALTER TABLE "venues" ALTER COLUMN "hasParking" DROP NOT NULL');
         await queryRunner.query('ALTER TABLE "venues" ALTER COLUMN "isAccessible" DROP NOT NULL');
         await queryRunner.query('ALTER TABLE "venues" DROP CONSTRAINT "PK_57b9556731ee08376830177b81f"');
-        await queryRunner.query('ALTER TABLE "supportSchedule" DROP COLUMN "updatedAt"');
     }
 
 }
