@@ -16,6 +16,7 @@ import { AppDataSource } from '../config/database.js';
 import { SupportSession, SessionStatus } from '../models/support-session.js';
 import { SupportMessage, SenderType, MessageType } from '../models/support-message.js';
 import * as dotenv from 'dotenv';
+import { getTaiwanTime } from '../utils/date.js';
 
 dotenv.config();
 
@@ -356,7 +357,7 @@ export class ChatService {
       }
 
       if (!session.firstResponseAt) {
-        session.firstResponseAt = new Date();
+        session.firstResponseAt = getTaiwanTime();
         await supportSessionRepo.save(session);
       }
 

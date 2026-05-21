@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 
 @Entity('supportKnowledgeBase')
 export class SupportKnowledgeBase {
@@ -60,11 +61,22 @@ export class SupportKnowledgeBase {
   @Column({ type: 'integer', default: 0 })
   notHelpfulCount: number;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   updatedAt: Date;
+
+  @BeforeInsert()
+  setTimestamps() {
+    this.createdAt = getTaiwanTime();
+    this.updatedAt = getTaiwanTime();
+  }
+
+  @BeforeUpdate()
+  updateTimestamp() {
+    this.updatedAt = getTaiwanTime();
+  }
 
   // 虛擬屬性：檢查是否有嵌入向量
   get hasEmbedding(): boolean {

@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, BeforeInsert } from 'typeorm';
 import { User } from './user.js';
+import { getTaiwanTime } from '../utils/date.js';
 
  
 // 會話類型枚舉
@@ -60,8 +61,13 @@ export class SupportSession {
   @Column({ type: 'timestamp', nullable: true })
   firstResponseAt: Date;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getTaiwanTime();
+  }
 
   @Column({ type: 'timestamp', nullable: true })
   closedAt: Date;
@@ -113,14 +119,14 @@ export class SupportSession {
     const lastActivity = this.messages && this.messages.length > 0 
       ? this.messages[this.messages.length - 1].createdAt 
       : this.createdAt;
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const thirtyMinutesAgo = new Date(getTaiwanTime().getTime() - 30 * 60 * 1000);
     return lastActivity < thirtyMinutesAgo;
   }
 
   // 方法：關閉會話
   close(satisfactionRating?: number, satisfactionComment?: string): void {
     this.status = SessionStatus.CLOSED;
-    this.closedAt = new Date();
+    this.closedAt = getTaiwanTime();
     if (satisfactionRating) this.satisfactionRating = satisfactionRating;
     if (satisfactionComment) this.satisfactionComment = satisfactionComment;
   }
@@ -135,7 +141,7 @@ export class SupportSession {
   // 方法：設定首次回應時間
   setFirstResponse(): void {
     if (!this.firstResponseAt) {
-      this.firstResponseAt = new Date();
+      this.firstResponseAt = getTaiwanTime();
     }
   }
 

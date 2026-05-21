@@ -5,12 +5,13 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
   ManyToOne,
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 import { Organization } from './organization.js';
 import { Venue } from './venue.js';
 import { LocationTag } from './location-tag.js';
@@ -119,11 +120,22 @@ export class Concert {
   @Column({ type: 'timestamp', nullable: true })
   cancelledAt: Date | null;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   updatedAt: Date;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
+
+  @BeforeInsert()
+  setTimestamps() {
+    this.createdAt = getTaiwanTime();
+    this.updatedAt = getTaiwanTime();
+  }
+
+  @BeforeUpdate()
+  updateTimestamp() {
+    this.updatedAt = getTaiwanTime();
+  }
 
   @OneToMany(() => ConcertSession, (session) => session.concert, {
     cascade: true, // 建立 Concert 時自動建立 sessions
@@ -153,7 +165,7 @@ export class Concert {
    * 軟刪除演唱會
    */
   public softDelete(): void {
-    this.cancelledAt = new Date();
+    this.cancelledAt = getTaiwanTime();
   }
 
   /**

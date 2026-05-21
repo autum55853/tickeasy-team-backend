@@ -11,6 +11,7 @@ import { chatService } from '../services/chat-service.js';
 import { AppDataSource } from '../config/database.js';
 import { SupportSession, SessionType, SessionStatus, Priority } from '../models/support-session.js';
 import { SupportMessage, SenderType, MessageType } from '../models/support-message.js';
+import { getTaiwanTime } from '../utils/date.js';
 
 export class SmartReplyController {
   /**
@@ -190,7 +191,7 @@ export class SmartReplyController {
 
         // 設定首次回應時間
         if (!session.firstResponseAt) {
-          session.firstResponseAt = new Date();
+          session.firstResponseAt = getTaiwanTime();
         }
         
         await supportSessionRepo.save(session);

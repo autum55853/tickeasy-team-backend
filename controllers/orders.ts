@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
+import { getTaiwanTime } from '../utils/date.js';
 // import { Ticket as TicketEntity} from '../models/ticket.js';
 import { TicketType as TicketTypeEntity} from '../models/ticket-type.js';
 import { ConcertSession as ConcertSessionEntity} from '../models/concert-session.js';
@@ -51,7 +52,7 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     throw ApiError.notFound('演唱會票券');
   }
 
-  const now = new Date();
+  const now = getTaiwanTime();
   if (now < selectedTicket.sellBeginDate || now > selectedTicket.sellEndDate) {
     throw ApiError.outOfTimeRange(selectedTicket.ticketTypeName);
   }
@@ -69,10 +70,10 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     throw ApiError.dataConstraintViolation('票券已售罄');
   }
 
-  // 設定 lock 時間（例如 15 分鐘後過期）
+  // 設定 lock 時間（15 分鐘後過期）
   const lockExpireTime = new Date(now.getTime() + 15 * 60 * 1000);
 
-  // 創建新訂單
+  // 創建新訂單（createdAt/updatedAt 由 @BeforeInsert 自動設定台灣時間）
   const newOrder = orderRepository.create({
     ticketTypeId,
     userId: authenticatedUser.userId,
@@ -83,8 +84,6 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     purchaserName,
     purchaserEmail,
     purchaserPhone,
-    createdAt: now,
-    updatedAt: now,
   });
 
   const savedOrder = await orderRepository.save(newOrder);
@@ -154,7 +153,7 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   const startTime = ConcertSession.sessionDate;
   const refundDeadline = new Date(startTime);
   refundDeadline.setDate(refundDeadline.getDate() - 7);
-  const now = new Date();
+  const now = getTaiwanTime();
   const afterRefundDeadline = now > refundDeadline;
   console.log('now:',now);
   console.log('refundDeadline:',refundDeadline);
@@ -226,18 +225,18 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     console.log(result);
     if (result.RtnCode === '1' ){
       selectedOrder.orderStatus = 'refunded';
-      selectedOrder.updatedAt = new Date();
+      selectedOrder.updatedAt = getTaiwanTime();
       await orderRepository.save(selectedOrder);
       console.log('order update');
       selectedPayment.status = 'refunded';
-      selectedPayment.updatedAt = new Date();
+      selectedPayment.updatedAt = getTaiwanTime();
       await paymentRepository.save(selectedPayment);
       console.log('payment update');
     }
     else {
       throw ApiError.create(400, '申請退款失敗', ErrorCode.DATA_INVALID);
     }
-    const now = new Date();
+    const now = getTaiwanTime();
 
     if (ticketType) {
       const isInSalePeriod = now >= ticketType.sellBeginDate && now <= ticketType.sellEndDate;

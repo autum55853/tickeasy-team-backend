@@ -8,8 +8,6 @@ import {
     Entity,
     PrimaryGeneratedColumn,
     Column,
-    CreateDateColumn,
-    UpdateDateColumn,
     DeleteDateColumn,
     OneToMany,
     Index,
@@ -17,6 +15,7 @@ import {
     BeforeUpdate,
 } from 'typeorm';
 import bcrypt from 'bcrypt';
+import { getTaiwanTime } from '../utils/date.js';
 // import crypto from 'crypto';
 import { Ticket } from './ticket.js';
 import { Order } from './order.js';
@@ -194,10 +193,10 @@ export class User {
     @Column('jsonb', { default: '[]', nullable: true })
     searchHistory: SearchHistoryItem[];
 
-    @CreateDateColumn({ type: 'timestamptz', nullable: false })
+    @Column({ type: 'timestamp', nullable: false })
     createdAt: Date;
 
-    @UpdateDateColumn({ type: 'timestamptz', nullable: false })
+    @Column({ type: 'timestamp', nullable: false })
     updatedAt: Date;
 
     @DeleteDateColumn({ nullable: true })
@@ -211,6 +210,17 @@ export class User {
 
     @OneToMany('Organization', 'user')
     organizations: Organization[];
+
+    @BeforeInsert()
+    setTimestamps() {
+        this.createdAt = getTaiwanTime();
+        this.updatedAt = getTaiwanTime();
+    }
+
+    @BeforeUpdate()
+    updateTimestamp() {
+        this.updatedAt = getTaiwanTime();
+    }
 
     @BeforeInsert()
     @BeforeUpdate()
@@ -249,8 +259,8 @@ export class User {
 
         // 存儲驗證碼和過期時間
         this.verificationToken = code;
-        this.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10分鐘
-        this.lastVerificationAttempt = new Date();
+        this.verificationTokenExpires = new Date(getTaiwanTime().getTime() + 10 * 60 * 1000);
+        this.lastVerificationAttempt = getTaiwanTime();
 
         return { token: '', code };
     }
@@ -268,8 +278,8 @@ export class User {
 
         // 存儲重置碼和過期時間
         this.passwordResetToken = code;
-        this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10分鐘
-        this.lastPasswordResetAttempt = new Date();
+        this.passwordResetExpires = new Date(getTaiwanTime().getTime() + 10 * 60 * 1000);
+        this.lastPasswordResetAttempt = getTaiwanTime();
 
         return { token: '', code };
     }

@@ -1,16 +1,17 @@
 /**
  * 訂單模型
  */
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  CreateDateColumn,
-  UpdateDateColumn,
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  BeforeInsert,
+  BeforeUpdate,
   ManyToOne,
   JoinColumn,
   OneToMany
 } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 import { TicketType } from './ticket-type.js';
 import { Payment } from './payment.js';
 
@@ -85,11 +86,22 @@ export class Order {
   @Column({ type: 'varchar', length: 255, nullable: true })
   invoiceUrl: string;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   updatedAt?: Date;
+
+  @BeforeInsert()
+  setTimestamps() {
+    this.createdAt = getTaiwanTime();
+    this.updatedAt = getTaiwanTime();
+  }
+
+  @BeforeUpdate()
+  updateTimestamp() {
+    this.updatedAt = getTaiwanTime();
+  }
   
   @OneToMany('Ticket', 'order')
   tickets: any[];

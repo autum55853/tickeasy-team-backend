@@ -1,15 +1,16 @@
 /**
  * 支付模型
  */
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  CreateDateColumn,
-  UpdateDateColumn,
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  BeforeInsert,
+  BeforeUpdate,
   ManyToOne,
   JoinColumn
 } from 'typeorm';
+import { getTaiwanTime } from '../utils/date.js';
 
 // 避免直接導入 Order 類型，使用接口代替
 interface OrderRef {
@@ -60,11 +61,22 @@ export class Payment {
   @Column({ type: 'jsonb', nullable: true })
   rawPayload: object;
   
-  @CreateDateColumn({ type: 'timestamptz', nullable: false })
+  @Column({ type: 'timestamp', nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   updatedAt?: Date;
+
+  @BeforeInsert()
+  setTimestamps() {
+    this.createdAt = getTaiwanTime();
+    this.updatedAt = getTaiwanTime();
+  }
+
+  @BeforeUpdate()
+  updateTimestamp() {
+    this.updatedAt = getTaiwanTime();
+  }
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   tradeNo: string;
