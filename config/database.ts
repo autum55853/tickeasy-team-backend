@@ -141,9 +141,7 @@ export const AppDataSource = new DataSource({
     TicketType, Ticket, Order, Payment, Venue, LocationTag, MusicTag,
     SupportKnowledgeBase, SupportSession, SupportMessage, SupportSchedule,
   ],
-  migrations: process.env.NODE_ENV === 'test'
-    ? []
-    : [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
+  migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
   subscribers: [],
   extra,
 });
