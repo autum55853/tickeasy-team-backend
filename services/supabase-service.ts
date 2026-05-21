@@ -13,7 +13,7 @@ export class SupabaseService {
 
   constructor() {
     const supabaseUrl = process.env.DB_URL!;
-    const supabaseKey = process.env.DB_ANON_KEY!;
+    const supabaseKey = process.env.DB_SERVICE_KEY!;
 
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('缺少 Supabase 環境變數: DB_URL 或 DB_ANON_KEY');
@@ -70,7 +70,7 @@ export class SupabaseService {
   ) {
     try {
       const { limit = 5, categories } = options;
-      
+
       let queryBuilder = this.client
         .from('supportKnowledgeBase')
         .select('*')
@@ -78,13 +78,13 @@ export class SupabaseService {
 
       // 關鍵字搜尋：標題、內容、標籤
       const keywords = query.toLowerCase().split(' ').filter(word => word.length > 1);
-      
+
       if (keywords.length > 0) {
         // 使用 PostgreSQL 的 ilike 進行模糊搜尋
-        const searchConditions = keywords.map(keyword => 
+        const searchConditions = keywords.map(keyword =>
           `title.ilike.%${keyword}%,content.ilike.%${keyword}%`
         ).join(',');
-        
+
         queryBuilder = queryBuilder.or(searchConditions);
       }
 
@@ -106,7 +106,7 @@ export class SupabaseService {
       const results = (data || []).map(item => {
         let score = 0;
         // const searchText = `${item.title} ${item.content}`.toLowerCase();
-        
+
         keywords.forEach(keyword => {
           if (item.title.toLowerCase().includes(keyword)) score += 3;
           if (item.content.toLowerCase().includes(keyword)) score += 2;

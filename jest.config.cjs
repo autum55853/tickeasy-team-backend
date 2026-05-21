@@ -14,4 +14,6 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/helpers/dbSetup.ts'],
   testTimeout: 60000,
   forceExit: true,
+  maxWorkers: 1,
+  resetModules: true,
 };

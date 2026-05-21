@@ -16,8 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
       - run: npm ci
       - run: npm run lint
 
@@ -28,8 +28,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
       - run: npm ci
       - run: npm run build
 
@@ -63,6 +63,7 @@ jobs:
       JWT_EXPIRES_DAY: 7d
       DB_URL: https://placeholder.supabase.co
       DB_ANON_KEY: placeholder
+      DB_SERVICE_KEY: placeholder
       EMAILER_USER: placeholder@example.com
       EMAILER_OAUTH_REFRESH_TOKEN: placeholder
       GOOGLE_OAUTH_CLIENT_ID: placeholder
@@ -77,13 +78,14 @@ jobs:
       CLEANUP_TEMP_IMAGES_HOURS: 24
       CLEANUP_INTERVAL_HOURS: 6
       OPENAI_API_KEY: placeholder
+      GEMINI_API_KEY: placeholder
 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
       - run: npm ci
       - name: Run migrations
         run: npm run migrate

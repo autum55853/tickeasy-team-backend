@@ -8,7 +8,7 @@ import { UploadContext, UploadImageParams, UploadImageResult } from '../types/up
 
 // 從環境變數讀取 Supabase URL 和 Service Key
 const supabaseUrl = process.env.DB_URL;
-const supabaseServiceKey = process.env.DB_ANON_KEY;
+const supabaseServiceKey = process.env.DB_SERVICE_KEY;
 
 // 檢查必要的環境變數是否存在
 if (!supabaseUrl || !supabaseServiceKey) {
