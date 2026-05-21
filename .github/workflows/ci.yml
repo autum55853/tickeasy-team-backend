@@ -63,6 +63,7 @@ jobs:
       JWT_EXPIRES_DAY: 7d
       DB_URL: https://placeholder.supabase.co
       DB_ANON_KEY: placeholder
+      DB_SERVICE_KEY: placeholder
       EMAILER_USER: placeholder@example.com
       EMAILER_OAUTH_REFRESH_TOKEN: placeholder
       GOOGLE_OAUTH_CLIENT_ID: placeholder
