@@ -141,7 +141,14 @@ export const AppDataSource = new DataSource({
     TicketType, Ticket, Order, Payment, Venue, LocationTag, MusicTag,
     SupportKnowledgeBase, SupportSession, SupportMessage, SupportSchedule,
   ],
-  migrations: [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
+  // 在 Jest 測試環境下不載入 migration glob：
+  // DataSource.initialize() 會非同步動態 import 所有 migration 檔案，
+  // 在 jest per-file sandbox 下後續檔案的 dynamic import 會在 env teardown 後觸發，
+  // 導致 "Test environment has been torn down" 與後續 "Driver not Connected"。
+  // npm run migrate 不會設定 JEST_WORKER_ID，仍會掃到 migration。
+  migrations: process.env.JEST_WORKER_ID
+    ? []
+    : [path.join(__dirname, '..', 'migrations', '*.{ts,js}')],
   subscribers: [],
   extra,
 });
