@@ -3,10 +3,10 @@ import createHttpError from 'http-errors';
 
 // Supabase 客戶端初始化
 const supabaseUrl = process.env.DB_URL;
-const supabaseServiceKey = process.env.DB_ANON_KEY;
+const supabaseServiceKey = process.env.DB_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('缺少 Supabase 環境變數設定 (DB_URL 或 DB_ANON_KEY)');
+  console.error('缺少 Supabase 環境變數設定 (DB_URL 或 DB_SERVICE_KEY)');
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '', {
