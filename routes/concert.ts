@@ -1,6 +1,6 @@
 import express from 'express';
 import * as concertController from '../controllers/concert.js';
-import { isAuthenticated } from '../middlewares/auth.js';
+import { isAuthenticated, adminAuth } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -58,6 +58,9 @@ router.get('/popular', concertController.getPopularConcerts);
 
 // 獲得場地
 router.get('/venues', concertController.getAllVenues);
+
+// 更新場地資料 (管理員)
+router.patch('/venues/:venueId', adminAuth, concertController.updateVenue);
 
 // 搜尋
 router.get('/search', concertController.searchConcerts);
