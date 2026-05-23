@@ -79,6 +79,12 @@ jobs:
       CLEANUP_INTERVAL_HOURS: 6
       OPENAI_API_KEY: placeholder
       GEMINI_API_KEY: placeholder
+      GOOGLE_GMAIL_CLIENT_ID: placeholder
+      GOOGLE_GMAIL_CLIENT_SECRET: placeholder
+      DISCORD_APPLICATION_ID: placeholder
+      DISCORD_BOT_TOKEN: placeholder
+      DISCORD_CHANNEL_ID: placeholder
+      PORT: 3000
 
     steps:
       - uses: actions/checkout@v4
