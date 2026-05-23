@@ -62,7 +62,7 @@ app.use(helmet());
 
 // CORS 配置
 const corsOptions = {
-   
+
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // 允許的來源
     const allowedOrigins = [
@@ -72,25 +72,22 @@ const corsOptions = {
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
       'http://127.0.0.1:5173',
-      'https://tickeasy-dashboard.onrender.com',
-      'https://frontend-fz4o.onrender.com',
+      'https://tickeasy-team-dashboard.onrender.com',
       'https://frontend-amber.onrender.com',
-      'https://tickeasy-frontend.onrender.com',
-      'https://tickeasy-f.onrender.com'
     ];
-    
+
     // 從 FRONTEND_URL 環境變數中提取前端域名（去掉 /callback）
     if (process.env.FRONTEND_URL) {
       const frontendUrl = process.env.FRONTEND_URL.replace('/callback', '');
       allowedOrigins.push(frontendUrl);
     }
-    
+
     // 開發環境允許沒有 origin 的請求（例如 Postman、移動應用）
     if (process.env.NODE_ENV === 'development' && !origin) {
       return callback(null, true);
     }
-    
-    
+
+
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -146,18 +143,18 @@ app.use('/api/v1/health', healthRouter);
 // 註冊錯誤處理中間件
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('錯誤詳情:', err);
-  
+
   // 開發環境顯示詳細錯誤信息，生產環境顯示友好錯誤信息
   const isDev = process.env.NODE_ENV === 'development';
-  
+
   const statusCode = err.status || 500;
-  
+
   // 處理特定類型的錯誤，提供友好的錯誤消息
   let message = err.message || '系統發生錯誤';
-  
+
   // 從錯誤對象中獲取錯誤碼，如果沒有則根據錯誤類型分配一個通用錯誤碼
   let errorCode = err.code || '';
-  
+
   // 如果沒有指定錯誤碼，則根據錯誤類型分配
   if (!errorCode) {
     if (err.name === 'EntityPropertyNotFoundError') {
@@ -180,28 +177,28 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
       errorCode = 'S01'; // 使用SYSTEM_ERROR的值
     }
   }
-  
+
   // 構建錯誤響應
   const errorResponse: any = {
     status: 'failed',
     message,
   };
-  
+
   // // 添加字段錯誤（如果有）
   // if (err.fieldErrors) {
   //   errorResponse.fieldErrors = err.fieldErrors;
   // }
-  
+
   // 只在開發環境下添加詳細錯誤信息
   if (isDev) {
     errorResponse.details = err.stack;
   }
-  
+
   // 如果 headers 已經發送，則將錯誤交給 Express 的預設錯誤處理器
   if (res.headersSent) {
     return next(err);
   }
-  
+
   res.status(statusCode).json(errorResponse);
 });
 
