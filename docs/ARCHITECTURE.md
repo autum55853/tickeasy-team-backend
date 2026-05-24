@@ -104,6 +104,7 @@ bin/server.ts
 | PATCH | `/:concertId/promotion` | adminAuth | 設定 promotion 權重 |
 | GET | `/popular` | — | 取得熱門演唱會（依 promotion → visitCount 排序） |
 | GET | `/venues` | — | 取得所有場地資料 |
+| PATCH | `/venues/:venueId` | adminAuth | 更新場地資料（所有欄位皆可選填） |
 | GET | `/search` | — | 搜尋演唱會（支援篩選、分頁、排序） |
 | GET | `/banners` | — | 取得首頁 Banner 演唱會（前 5 筆） |
 

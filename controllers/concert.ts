@@ -566,6 +566,48 @@ export const getAllVenues = handleErrorAsync(
   }
 );
 
+// ------------3b. 更新場地資料-------------
+export const updateVenue = handleErrorAsync(
+  async (req: Request, res: Response) => {
+    const { venueId } = req.params;
+    const {
+      venueName,
+      venueDescription,
+      venueAddress,
+      venueCapacity,
+      venueImageUrl,
+      googleMapUrl,
+      isAccessible,
+      hasParking,
+      hasTransit,
+    } = req.body;
+
+    const venueRepository = AppDataSource.getRepository(Venue);
+    const venue = await venueRepository.findOne({ where: { venueId } });
+    if (!venue) {
+      throw ApiError.notFound('場地');
+    }
+
+    if (venueName !== undefined) venue.venueName = venueName;
+    if (venueDescription !== undefined) venue.venueDescription = venueDescription;
+    if (venueAddress !== undefined) venue.venueAddress = venueAddress;
+    if (venueCapacity !== undefined) venue.venueCapacity = venueCapacity;
+    if (venueImageUrl !== undefined) venue.venueImageUrl = venueImageUrl;
+    if (googleMapUrl !== undefined) venue.googleMapUrl = googleMapUrl;
+    if (isAccessible !== undefined) venue.isAccessible = isAccessible;
+    if (hasParking !== undefined) venue.hasParking = hasParking;
+    if (hasTransit !== undefined) venue.hasTransit = hasTransit;
+
+    const updated = await venueRepository.save(venue);
+
+    res.status(200).json({
+      status: 'success',
+      message: '成功更新場地資料',
+      data: updated,
+    });
+  }
+);
+
 // ------------4. 取得熱門活動-------------
 // 取得熱門活動, 首頁
 // 先依據promotion權重降序，若promotion相同，再依visitCount排序

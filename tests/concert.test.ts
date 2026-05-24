@@ -6,7 +6,7 @@ import { AppDataSource } from '../config/database.js';
 import { Concert } from '../models/concert.js';
 import { TicketType } from '../models/ticket-type.js';
 import { ConcertSession } from '../models/concert-session.js';
-import { User } from '../models/user.js';
+import { User, UserRole } from '../models/user.js';
 import { Organization } from '../models/organization.js';
 import { Venue } from '../models/venue.js';
 import { LocationTag } from '../models/location-tag.js';
@@ -475,5 +475,97 @@ describe('GET /api/v1/concerts/banners', () => {
     expect(res.body.status).toBe('success');
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeLessThanOrEqual(5);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// PATCH /api/v1/concerts/venues/:venueId（更新場地資料，管理員）
+// ════════════════════════════════════════════════════════════════════════
+describe('PATCH /api/v1/concerts/venues/:venueId', () => {
+  let venueForUpdate: Venue;
+  let adminUser: User;
+  let adminToken: string;
+
+  beforeAll(async () => {
+    venueForUpdate = await createTestVenue({ venueName: `Venue Update Test ${Date.now()}` });
+    adminUser = await createTestUser({ role: UserRole.ADMIN, name: 'Admin Tester' });
+    adminToken = generateTestToken(adminUser.userId, 'admin');
+  });
+
+  afterAll(async () => {
+    await AppDataSource.getRepository(Venue).delete({ venueId: venueForUpdate.venueId });
+    await AppDataSource.getRepository(User).delete({ userId: adminUser.userId });
+  });
+
+  it('管理員成功更新 venueImageUrl → 200', async () => {
+    const res = await request(server)
+      .patch(`/api/v1/concerts/venues/${venueForUpdate.venueId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ venueImageUrl: 'https://example.com/venue.jpg' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+    expect(res.body.data.venueImageUrl).toBe('https://example.com/venue.jpg');
+  });
+
+  it('部分更新不影響其他欄位', async () => {
+    const original = await AppDataSource.getRepository(Venue).findOne({
+      where: { venueId: venueForUpdate.venueId },
+    });
+
+    const res = await request(server)
+      .patch(`/api/v1/concerts/venues/${venueForUpdate.venueId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ venueName: `Updated Name ${Date.now()}` });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.venueAddress).toBe(original!.venueAddress);
+    expect(res.body.data.venueCapacity).toBe(original!.venueCapacity);
+  });
+
+  it('可同時更新多個欄位 → 200', async () => {
+    const res = await request(server)
+      .patch(`/api/v1/concerts/venues/${venueForUpdate.venueId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        venueDescription: '測試場地描述',
+        isAccessible: true,
+        hasParking: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.venueDescription).toBe('測試場地描述');
+    expect(res.body.data.isAccessible).toBe(true);
+    expect(res.body.data.hasParking).toBe(true);
+  });
+
+  it('未認證 → 401', async () => {
+    const res = await request(server)
+      .patch(`/api/v1/concerts/venues/${venueForUpdate.venueId}`)
+      .send({ venueImageUrl: 'https://example.com/venue.jpg' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('一般用戶（非管理員）→ 403', async () => {
+    const res = await request(server)
+      .patch(`/api/v1/concerts/venues/${venueForUpdate.venueId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ venueImageUrl: 'https://example.com/venue.jpg' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('場地不存在 → 404', async () => {
+    const fakeId = '00000000-0000-0000-0000-000000000000';
+    const res = await request(server)
+      .patch(`/api/v1/concerts/venues/${fakeId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ venueImageUrl: 'https://example.com/venue.jpg' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.status).toBe('failed');
   });
 });
