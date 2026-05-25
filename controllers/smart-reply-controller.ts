@@ -12,6 +12,7 @@ import { AppDataSource } from '../config/database.js';
 import { SupportSession, SessionType, SessionStatus, Priority } from '../models/support-session.js';
 import { SupportMessage, SenderType, MessageType } from '../models/support-message.js';
 import { getTaiwanTime } from '../utils/date.js';
+import { sendSupportRequest } from '../services/discordService.js';
 
 export class SmartReplyController {
   /**
@@ -164,10 +165,18 @@ export class SmartReplyController {
             openaiResponseId = aiReply.responseId;
 
           } catch (error) {
-            console.warn('⚠️ OpenAI Responses API 失敗，使用預設回覆:', error);
-            finalMessage = '抱歉，我現在無法理解您的問題。請稍後再試或輸入「人工客服」尋求協助。';
+            console.warn('⚠️ OpenAI Responses API 失敗，轉送 Discord 人工客服:', error);
+            try {
+              const msgId = await sendSupportRequest(session, initialMessage, []);
+              if (msgId) session.discordMessageId = msgId;
+              session.discordFallbackAt = getTaiwanTime();
+              session.status = SessionStatus.WAITING;
+            } catch (fallbackErr) {
+              console.error('❌ Discord fallback 傳送失敗:', fallbackErr);
+            }
+            finalMessage = '抱歉，AI 系統暫時無法回應，您的問題已轉交人工客服，請稍候。';
             confidence = 0.1;
-            strategy = 'fallback';
+            strategy = 'discord_fallback';
           }
         }
 
@@ -318,13 +327,26 @@ export class SmartReplyController {
           strategy = 'openai_continue';
 
         } catch (error) {
-          console.warn('⚠️ OpenAI 對話延續失敗，回退到關鍵字匹配:', error);
-          
-          // 回退到關鍵字匹配
-          const smartReply = await smartReplyService.getSmartReply(message);
-          finalMessage = smartReply.message;
-          confidence = smartReply.data?.confidence || 0;
-          strategy = 'keyword_fallback';
+          console.warn('⚠️ OpenAI 對話延續失敗，轉送 Discord 人工客服:', error);
+
+          try {
+            const recentMessages = await supportMessageRepo.find({
+              where: { sessionId: session.supportSessionId },
+              order: { createdAt: 'DESC' },
+              take: 5,
+            });
+            const msgId = await sendSupportRequest(session, message, recentMessages.reverse());
+            if (msgId) session.discordMessageId = msgId;
+            session.discordFallbackAt = getTaiwanTime();
+            session.status = SessionStatus.WAITING;
+            await supportSessionRepo.save(session);
+          } catch (fallbackErr) {
+            console.error('❌ Discord fallback 傳送失敗:', fallbackErr);
+          }
+
+          finalMessage = '抱歉，AI 系統暫時無法回應，您的問題已轉交人工客服，請稍候。';
+          confidence = 0.1;
+          strategy = 'discord_fallback';
         }
       } else {
         console.log('🔍 沒有 OpenAI Response ID，使用關鍵字匹配');

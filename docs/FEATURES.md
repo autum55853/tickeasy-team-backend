@@ -36,6 +36,8 @@
 | AI | Gemini Embedding 語意搜尋（768 維） | ✅ 完成 |
 | 知識庫 | 知識庫 CRUD（Admin） | ✅ 完成 |
 | 知識庫 | 批量更新 Embedding 向量 | ✅ 完成 |
+| Discord | AI 失效 → Discord 人工客服 Fallback | ✅ 完成 |
+| Discord | 管理員 Modal 回覆客服請求 | ✅ 完成 |
 
 ---
 
