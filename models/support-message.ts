@@ -37,6 +37,8 @@ interface MessageMetadata {
   model?: string;             // 使用的 AI 模型
   tokens?: number;            // 使用的 token 數量
   responseId?: string;        // OpenAI Responses API 的回應 ID
+  discordUserId?: string;     // Discord 管理員 user ID（人工 fallback 回覆時記錄）
+  discordUsername?: string;   // Discord 管理員 username（人工 fallback 回覆時記錄）
 }
 
 @Entity('supportMessage')

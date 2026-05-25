@@ -78,6 +78,12 @@ export class SupportSession {
   @Column({ type: 'text', nullable: true })
   satisfactionComment: string;
 
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  discordMessageId: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  discordFallbackAt: Date | null;
+
   @OneToMany('SupportMessage', 'session')
   messages: any[];
 

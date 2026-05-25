@@ -122,6 +122,8 @@ throw ApiError.validation('表單驗證失敗', {
 | `DISCORD_CHANNEL_ID` | Discord 目標頻道 ID | 否（Discord 功能） | — |
 | `DISCORD_PUBLIC_KEY` | Discord 應用程式 Ed25519 公鑰，用於驗證 Interaction 簽名 | 否（Discord 功能） | — |
 | `DISCORD_APPLICATION_ID` | Discord 應用程式 ID，用於 PATCH Interaction 訊息（deferred response） | 否（Discord 功能） | — |
+| `DISCORD_WEBHOOK_URL` | Discord Webhook URL，演唱會審核通知 | 否（Discord 功能） | — |
+| `DISCORD_SUPPORT_WEBHOOK_URL` | Discord Webhook URL，AI 失效時傳送客服請求至支援頻道 | 否（Discord 功能） | — |
 
 ## 常見陷阱
 
