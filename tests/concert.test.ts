@@ -569,3 +569,194 @@ describe('PATCH /api/v1/concerts/venues/:venueId', () => {
     expect(res.body.status).toBe('failed');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// POST /api/v1/concerts/venues（新增場地，管理員）
+// ════════════════════════════════════════════════════════════════════════
+describe('POST /api/v1/concerts/venues', () => {
+  let adminUser: User;
+  let adminToken: string;
+  const createdVenueIds: string[] = [];
+
+  const validPayload = () => ({
+    venueName: `新增場地測試 ${Date.now()}`,
+    venueDescription: '測試場地描述',
+    venueAddress: '台北市信義區測試路99號',
+    venueCapacity: 500,
+    venueImageUrl: 'https://example.com/venue.jpg',
+    googleMapUrl: 'https://maps.google.com/?q=test',
+    isAccessible: true,
+    hasParking: false,
+    hasTransit: true,
+  });
+
+  beforeAll(async () => {
+    adminUser = await createTestUser({ role: UserRole.ADMIN, name: 'Venue Admin' });
+    adminToken = generateTestToken(adminUser.userId, 'admin');
+  });
+
+  afterAll(async () => {
+    for (const id of createdVenueIds) {
+      await AppDataSource.getRepository(Venue).delete({ venueId: id });
+    }
+    await AppDataSource.getRepository(User).delete({ userId: adminUser.userId });
+  });
+
+  it('管理員成功新增場地 → 201', async () => {
+    const res = await request(server)
+      .post('/api/v1/concerts/venues')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(validPayload());
+
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('success');
+    expect(res.body.data.venueName).toContain('新增場地測試');
+    expect(res.body.data.venueCapacity).toBe(500);
+    expect(res.body.data.isAccessible).toBe(true);
+    expect(res.body.data.venueId).toBeDefined();
+
+    createdVenueIds.push(res.body.data.venueId);
+  });
+
+  it('未認證 → 401', async () => {
+    const res = await request(server)
+      .post('/api/v1/concerts/venues')
+      .send(validPayload());
+
+    expect(res.status).toBe(401);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('一般用戶（非管理員）→ 403', async () => {
+    const res = await request(server)
+      .post('/api/v1/concerts/venues')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send(validPayload());
+
+    expect(res.status).toBe(403);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('缺少必填欄位 venueName → 400', async () => {
+    const payload = validPayload();
+    const { venueName: _, ...withoutName } = payload;
+
+    const res = await request(server)
+      .post('/api/v1/concerts/venues')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(withoutName);
+
+    expect(res.status).toBe(400);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('缺少必填欄位 venueAddress → 400', async () => {
+    const payload = validPayload();
+    const { venueAddress: _, ...withoutAddress } = payload;
+
+    const res = await request(server)
+      .post('/api/v1/concerts/venues')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(withoutAddress);
+
+    expect(res.status).toBe(400);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('缺少多個必填欄位 → 400', async () => {
+    const res = await request(server)
+      .post('/api/v1/concerts/venues')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ venueName: '只有名稱' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.status).toBe('failed');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// DELETE /api/v1/concerts/venues/:venueId（刪除場地，軟刪除，管理員）
+// ════════════════════════════════════════════════════════════════════════
+describe('DELETE /api/v1/concerts/venues/:venueId', () => {
+  let adminUser: User;
+  let adminToken: string;
+  let venueToDelete: Venue;
+
+  beforeAll(async () => {
+    adminUser = await createTestUser({ role: UserRole.ADMIN, name: 'Delete Admin' });
+    adminToken = generateTestToken(adminUser.userId, 'admin');
+  });
+
+  beforeEach(async () => {
+    venueToDelete = await createTestVenue({ venueName: `待刪場地 ${Date.now()}` });
+  });
+
+  afterEach(async () => {
+    await AppDataSource.getRepository(Venue)
+      .createQueryBuilder()
+      .withDeleted()
+      .delete()
+      .where('"venueId" = :id', { id: venueToDelete.venueId })
+      .execute();
+  });
+
+  afterAll(async () => {
+    await AppDataSource.getRepository(User).delete({ userId: adminUser.userId });
+  });
+
+  it('管理員成功軟刪除場地 → 200', async () => {
+    const res = await request(server)
+      .delete(`/api/v1/concerts/venues/${venueToDelete.venueId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+
+    const inDb = await AppDataSource.getRepository(Venue).findOne({
+      where: { venueId: venueToDelete.venueId },
+    });
+    expect(inDb).toBeNull();
+  });
+
+  it('軟刪除後 deletedAt 有值（記錄仍存在 DB）', async () => {
+    await request(server)
+      .delete(`/api/v1/concerts/venues/${venueToDelete.venueId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    const inDbWithDeleted = await AppDataSource.getRepository(Venue)
+      .createQueryBuilder('v')
+      .withDeleted()
+      .where('v."venueId" = :id', { id: venueToDelete.venueId })
+      .getOne();
+
+    expect(inDbWithDeleted).not.toBeNull();
+    expect(inDbWithDeleted!.deletedAt).not.toBeNull();
+  });
+
+  it('未認證 → 401', async () => {
+    const res = await request(server)
+      .delete(`/api/v1/concerts/venues/${venueToDelete.venueId}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('一般用戶（非管理員）→ 403', async () => {
+    const res = await request(server)
+      .delete(`/api/v1/concerts/venues/${venueToDelete.venueId}`)
+      .set('Authorization', `Bearer ${authToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.status).toBe('failed');
+  });
+
+  it('場地不存在 → 404', async () => {
+    const fakeId = '00000000-0000-0000-0000-000000000000';
+    const res = await request(server)
+      .delete(`/api/v1/concerts/venues/${fakeId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.status).toBe('failed');
+  });
+});
