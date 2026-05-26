@@ -59,8 +59,14 @@ router.get('/popular', concertController.getPopularConcerts);
 // 獲得場地
 router.get('/venues', concertController.getAllVenues);
 
+// 新增場地 (管理員)
+router.post('/venues', adminAuth, concertController.createVenue);
+
 // 更新場地資料 (管理員)
 router.patch('/venues/:venueId', adminAuth, concertController.updateVenue);
+
+// 刪除場地 (管理員)
+router.delete('/venues/:venueId', adminAuth, concertController.deleteVenue);
 
 // 搜尋
 router.get('/search', concertController.searchConcerts);

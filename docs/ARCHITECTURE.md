@@ -103,8 +103,10 @@ bin/server.ts
 | PATCH | `/:concertId/visit` | — | 增加 visitCount |
 | PATCH | `/:concertId/promotion` | adminAuth | 設定 promotion 權重 |
 | GET | `/popular` | — | 取得熱門演唱會（依 promotion → visitCount 排序） |
-| GET | `/venues` | — | 取得所有場地資料 |
+| GET | `/venues` | — | 取得所有場地資料（已軟刪除的不回傳） |
+| POST | `/venues` | adminAuth | 新增場地（所有欄位必填） |
 | PATCH | `/venues/:venueId` | adminAuth | 更新場地資料（所有欄位皆可選填） |
+| DELETE | `/venues/:venueId` | adminAuth | 軟刪除場地（設定 deletedAt） |
 | GET | `/search` | — | 搜尋演唱會（支援篩選、分頁、排序） |
 | GET | `/banners` | — | 取得首頁 Banner 演唱會（前 5 筆） |
 
@@ -318,6 +320,9 @@ bin/server.ts
 | isAccessible | boolean | 無障礙設施 |
 | hasParking | boolean | 停車場 |
 | hasTransit | boolean | 大眾交通 |
+| createdAt | timestamp | 建立時間 |
+| updatedAt | timestamp | 更新時間 |
+| deletedAt | timestamp | 軟刪除時間（null = 未刪除） |
 
 ### order
 
