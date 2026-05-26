@@ -31,3 +31,18 @@ export interface VenueResponse extends ApiResponse<{
 export interface VenuesResponse extends ApiResponse<{
   venues: VenueData[];
 }> {}
+
+/**
+ * 新增場館的請求類型（所有欄位必填）
+ */
+export interface CreateVenueRequest {
+  venueName: string;
+  venueDescription: string;
+  venueAddress: string;
+  venueCapacity: number;
+  venueImageUrl: string;
+  googleMapUrl: string;
+  isAccessible: boolean;
+  hasParking: boolean;
+  hasTransit: boolean;
+}

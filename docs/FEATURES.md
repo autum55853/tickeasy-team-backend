@@ -20,7 +20,9 @@
 | 演唱會 | visitCount 計數 | ✅ 完成 |
 | 演唱會 | promotion 權重管理（Admin） | ✅ 完成 |
 | 演唱會 | 場地資料查詢 | ✅ 完成 |
+| 演唱會 | 場地資料新增（Admin） | ✅ 完成 |
 | 演唱會 | 場地資料更新（Admin） | ✅ 完成 |
+| 演唱會 | 場地資料刪除-軟刪除（Admin） | ✅ 完成 |
 | 圖片 | 圖片上傳（S3 / Supabase） | ✅ 完成 |
 | 圖片 | 暫存圖片定時清理 | ✅ 完成 |
 | 票券 | 查詢場次票種 | ✅ 完成 |
@@ -221,9 +223,29 @@
 
 ### 4.8 場地資料 `GET /api/v1/concerts/venues`
 
-回傳所有場地完整資料，無需認證。
+回傳所有場地完整資料（已軟刪除的不回傳），無需認證。
 
-### 4.9 更新場地資料 `PATCH /api/v1/concerts/venues/:venueId`
+### 4.9 新增場地 `POST /api/v1/concerts/venues`
+
+**需要 adminAuth**（admin 或 superuser）。
+
+所有欄位皆為**必填**：
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `venueName` | string | 場地名稱 |
+| `venueDescription` | string | 場地描述 |
+| `venueAddress` | string | 地址 |
+| `venueCapacity` | number | 容納人數 |
+| `venueImageUrl` | string | 場地圖片 URL |
+| `googleMapUrl` | string | Google Maps 連結 |
+| `isAccessible` | boolean | 無障礙設施 |
+| `hasParking` | boolean | 停車場 |
+| `hasTransit` | boolean | 大眾交通 |
+
+任一欄位缺少 → 400 V01。成功 → 201。
+
+### 4.10 更新場地資料 `PATCH /api/v1/concerts/venues/:venueId`
 
 **需要 adminAuth**（admin 或 superuser）。
 
@@ -240,6 +262,14 @@
 | `isAccessible` | boolean | 無障礙設施 |
 | `hasParking` | boolean | 停車場 |
 | `hasTransit` | boolean | 大眾交通 |
+
+場地不存在 → 404 D01。
+
+### 4.11 刪除場地 `DELETE /api/v1/concerts/venues/:venueId`
+
+**需要 adminAuth**（admin 或 superuser）。
+
+軟刪除（設定 `deletedAt` 時間戳），不實際移除資料庫記錄，不影響已關聯演唱會。
 
 場地不存在 → 404 D01。
 

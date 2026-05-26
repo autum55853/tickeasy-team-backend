@@ -5,6 +5,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  DeleteDateColumn,
   BeforeInsert,
   BeforeUpdate,
   OneToMany
@@ -49,6 +50,9 @@ export class Venue {
 
   @Column({ type: 'timestamp', nullable: false })
   updatedAt: Date;
+
+  @DeleteDateColumn({ type: 'timestamp', nullable: true })
+  deletedAt: Date | null;
 
   @BeforeInsert()
   setTimestamps() {
