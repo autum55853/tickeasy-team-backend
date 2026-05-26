@@ -508,11 +508,10 @@ export class SmartReplyController {
       // 更新會話狀態
       session.status = SessionStatus.WAITING;
       session.priority = Priority.HIGH; // 人工轉接提高優先級
-      await supportSessionRepo.save(session);
 
       // 記錄轉接原因
+      const supportMessageRepo = AppDataSource.getRepository(SupportMessage);
       if (reason) {
-        const supportMessageRepo = AppDataSource.getRepository(SupportMessage);
         const transferMsg = new SupportMessage();
         transferMsg.sessionId = session.supportSessionId;
         transferMsg.senderType = SenderType.BOT;
@@ -523,6 +522,23 @@ export class SmartReplyController {
         };
         await supportMessageRepo.save(transferMsg);
       }
+
+      // 轉送 Discord 人工客服
+      try {
+        const recentMessages = await supportMessageRepo.find({
+          where: { sessionId: session.supportSessionId },
+          order: { createdAt: 'DESC' },
+          take: 5,
+        });
+        const userMessage = reason || '用戶主動申請人工客服轉接';
+        const msgId = await sendSupportRequest(session, userMessage, recentMessages.reverse());
+        if (msgId) session.discordMessageId = msgId;
+        session.discordFallbackAt = getTaiwanTime();
+      } catch (fallbackErr) {
+        console.error('❌ Discord 通知傳送失敗:', fallbackErr);
+      }
+
+      await supportSessionRepo.save(session);
 
       res.json({
         success: true,
