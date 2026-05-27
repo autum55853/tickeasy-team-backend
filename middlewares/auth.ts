@@ -82,6 +82,36 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
 };
 
 /**
+ * SSE 專用 optional auth
+ * EventSource 原生不支援 Authorization header，token 可能來自：
+ *   1. Authorization header（fetch event-source polyfill）
+ *   2. cookie `auth_token`（同源情境）
+ *   3. query string `?token=...`（跨域 fallback）
+ * 無 token 時放行為匿名（route 內依 sessionId 做存取控管）。
+ */
+export const sseOptionalAuth = (req: Request, res: Response, next: NextFunction) => {
+  const headerToken = req.headers.authorization?.replace('Bearer ', '');
+  const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
+  const cookieToken = cookies?.auth_token;
+  const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
+  const token = headerToken || cookieToken || queryToken;
+
+  if (!token) {
+    req.user = undefined;
+    return next();
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret', (err: jwt.VerifyErrors | null, decoded: unknown) => {
+    if (err || !decoded || typeof decoded !== 'object') {
+      req.user = undefined;
+    } else {
+      req.user = decoded as TokenPayload;
+    }
+    next();
+  });
+};
+
+/**
  * 驗證用戶是否為管理員的中間件
  */
 export const isAdmin = async (req: Request, res: Response, next: NextFunction) => {

@@ -5,6 +5,7 @@ import { ReviewStatus } from '../models/concert.js';
 import { AppDataSource } from '../config/database.js';
 import { SupportSession, SessionStatus } from '../models/support-session.js';
 import { SupportMessage, SenderType, MessageType } from '../models/support-message.js';
+import { publish as publishSse } from '../services/sse-broker.js';
 
 export async function handleDiscordInteraction(req: Request, res: Response): Promise<void> {
   const signature = req.headers['x-signature-ed25519'] as string;
@@ -149,6 +150,18 @@ export async function handleDiscordInteraction(req: Request, res: Response): Pro
 
         session.status = SessionStatus.ACTIVE;
         await sessionRepo.save(session);
+
+        // 推送給訂閱中的前端 EventSource
+        publishSse(sessionId, {
+          messageId: msg.supportMessageId,
+          sessionId,
+          senderType: SenderType.AGENT,
+          senderId: msg.senderId ?? null,
+          messageText: msg.messageText,
+          messageType: msg.messageType,
+          metadata: msg.metadata as Record<string, unknown>,
+          createdAt: msg.createdAt,
+        });
 
         await patchInteractionResponse(interactionToken, {
           content: `✅ 已由 **${discordUsername}** 回覆`,

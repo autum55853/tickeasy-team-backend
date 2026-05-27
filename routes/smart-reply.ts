@@ -7,7 +7,7 @@
 import express from 'express';
 import { SmartReplyController } from '../controllers/smart-reply-controller.js';
 import { body, param, validationResult } from 'express-validator';
-import { optionalAuth, checkSessionAccess } from '../middlewares/auth.js';
+import { optionalAuth, checkSessionAccess, sseOptionalAuth } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -111,6 +111,21 @@ router.post('/session/:sessionId/transfer',
     handleValidationErrors
   ],
   SmartReplyController.requestHumanTransfer
+);
+
+/**
+ * @route GET /api/smart-reply/session/:sessionId/stream
+ * @desc 訂閱會話訊息串流（SSE，給人工客服訊息推送用）
+ * @params { sessionId: string }
+ * @query { token?: string } 跨域 EventSource fallback；同源可改用 cookie
+ */
+router.get('/session/:sessionId/stream',
+  sseOptionalAuth,
+  [
+    param('sessionId').isUUID().withMessage('會話 ID 格式不正確'),
+    handleValidationErrors
+  ],
+  SmartReplyController.streamSession
 );
 
 /**
