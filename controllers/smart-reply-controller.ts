@@ -13,6 +13,7 @@ import { SupportSession, SessionType, SessionStatus, Priority } from '../models/
 import { SupportMessage, SenderType, MessageType } from '../models/support-message.js';
 import { getTaiwanTime } from '../utils/date.js';
 import { sendSupportRequest } from '../services/discordService.js';
+import { subscribe as subscribeSse } from '../services/sse-broker.js';
 
 export class SmartReplyController {
   /**
@@ -295,6 +296,35 @@ export class SmartReplyController {
       userMsg.messageType = MessageType.TEXT;
       await supportMessageRepo.save(userMsg);
 
+      // === 人工模式短路：跳過 AI，直接轉送 Discord ===
+      if (session.sessionType === SessionType.HUMAN) {
+        try {
+          const recentMessages = await supportMessageRepo.find({
+            where: { sessionId: session.supportSessionId },
+            order: { createdAt: 'DESC' },
+            take: 5,
+          });
+          const msgId = await sendSupportRequest(session, message, recentMessages.reverse());
+          if (msgId) {
+            session.discordMessageId = msgId;
+            session.discordFallbackAt = getTaiwanTime();
+            await supportSessionRepo.save(session);
+          }
+        } catch (err) {
+          console.error('[SmartReply] 人工模式轉送 Discord 失敗:', err);
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            message: null,
+            confidence: 1,
+            strategy: 'human_forward',
+            sessionStatus: session.status,
+          },
+        });
+      }
+
       // === 下層：AI 回覆處理 ===
       let finalMessage;
       let confidence = 0;
@@ -505,9 +535,10 @@ export class SmartReplyController {
         });
       }
 
-      // 更新會話狀態
+      // 更新會話狀態 — 標記為人工模式，後續 sendMessage 跳過 AI
       session.status = SessionStatus.WAITING;
       session.priority = Priority.HIGH; // 人工轉接提高優先級
+      session.sessionType = SessionType.HUMAN;
 
       // 記錄轉接原因
       const supportMessageRepo = AppDataSource.getRepository(SupportMessage);
@@ -658,6 +689,67 @@ export class SmartReplyController {
         message: '關鍵字測試失敗',
         error: error.message
       });
+    }
+  }
+
+  /**
+   * 訂閱會話訊息串流（SSE）
+   * GET /api/v1/smart-reply/session/:sessionId/stream
+   *
+   * 認證：sseOptionalAuth（cookie / query token / Authorization header 擇一）
+   * 權限：若已登入，會話必須屬於該用戶；匿名僅依 sessionId 訪問。
+   * Payload：人工客服訊息（discordController.MODAL_SUBMIT 寫入後 publish）。
+   */
+  static async streamSession(req: Request, res: Response) {
+    try {
+      const { sessionId } = req.params;
+      const userId = (req.user as { userId?: string } | undefined)?.userId;
+
+      const supportSessionRepo = AppDataSource.getRepository(SupportSession);
+      const session = await supportSessionRepo.findOne({
+        where: { supportSessionId: sessionId },
+      });
+
+      if (!session) {
+        return res.status(404).json({ success: false, message: '會話不存在' });
+      }
+      if (userId && session.userId && session.userId !== userId) {
+        return res.status(403).json({ success: false, message: '無權限訂閱此會話' });
+      }
+      if (session.status === SessionStatus.CLOSED) {
+        return res.status(400).json({ success: false, message: '會話已關閉' });
+      }
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no'); // 停用 nginx 緩衝
+      if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+      res.write(': connected\n\n');
+
+      const unsubscribe = subscribeSse(session.supportSessionId, res);
+
+      req.on('close', () => {
+        unsubscribe();
+        try {
+          res.end();
+        } catch {
+          /* ignore */
+        }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      console.error('❌ SSE 訂閱失敗:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: 'SSE 訂閱失敗', error: message });
+      } else {
+        try {
+          res.end();
+        } catch {
+          /* ignore */
+        }
+      }
     }
   }
 
