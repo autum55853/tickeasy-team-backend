@@ -42,6 +42,8 @@ export interface ChatResponse {
   confidence: number;
   hasRelevantInfo: boolean;
   shouldTransfer?: boolean;
+  // AI 服務失效（key 未設定 / 呼叫失敗）時為 true，供上層觸發自動轉人工
+  aiUnavailable?: boolean;
   sessionId?: string;
   // [OpenAI] responseId: string; — Responses API 回應 ID，Gemini 無此機制，回傳空字串（欄位保留供相容）
   responseId: string;
@@ -565,6 +567,7 @@ export class ChatService {
       confidence: 0,
       hasRelevantInfo: false,
       shouldTransfer: true,
+      aiUnavailable: true,
       responseId: '',
       processingTime: Date.now() - startTime,
       model: GEMINI_MODEL,

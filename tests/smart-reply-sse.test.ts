@@ -20,7 +20,7 @@ jest.unstable_mockModule('../services/discordService.js', () => ({
 }));
 
 // Mock chatService — 避免真實 OpenAI 呼叫
-const mockChat = jest.fn<() => Promise<{ message: string; confidence: number; responseId: string | null; processingTime: number }>>()
+const mockChat = jest.fn<() => Promise<{ message: string; confidence: number; responseId: string | null; processingTime: number; aiUnavailable?: boolean }>>()
   .mockResolvedValue({ message: 'AI 回覆', confidence: 0.9, responseId: 'resp-abc', processingTime: 100 });
 const mockContinueChat = jest.fn<() => Promise<{ message: string; confidence: number; responseId: string | null }>>()
   .mockResolvedValue({ message: 'AI 延續回覆', confidence: 0.85, responseId: null });
@@ -344,6 +344,58 @@ describe('POST /session/:sessionId/transfer — escalateToHuman', () => {
       .send({});
 
     expect(res.status).toBe(404);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// POST /session/start — AI 失效時自動轉人工
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('POST /session/start — AI 失效自動轉人工', () => {
+  const createdSessionIds: string[] = [];
+
+  beforeEach(() => {
+    mockSendSupportRequest.mockClear();
+    mockChat.mockClear();
+    // 關鍵字匹配 neutral → 進入 AI 分支
+    mockGetSmartReply.mockResolvedValue({ type: 'neutral', message: '請問有什麼可以幫助您？', data: { confidence: 0.1 } });
+  });
+
+  afterAll(async () => {
+    for (const id of createdSessionIds) await cleanupSession(id);
+  });
+
+  it('AI 回傳 aiUnavailable → sessionType=HUMAN 且 Discord 被呼叫', async () => {
+    mockChat.mockResolvedValueOnce({ message: '抱歉，系統暫時無法處理您的請求', confidence: 0, responseId: '', processingTime: 10, aiUnavailable: true });
+
+    const res = await request(app)
+      .post('/api/v1/smart-reply/session/start')
+      .send({ initialMessage: '請問退票流程？', category: '一般諮詢' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.sessionType).toBe(SessionType.HUMAN);
+    expect(mockSendSupportRequest).toHaveBeenCalled();
+
+    createdSessionIds.push(res.body.data.sessionId);
+
+    const repo = AppDataSource.getRepository(SupportSession);
+    const saved = await repo.findOne({ where: { supportSessionId: res.body.data.sessionId } });
+    expect(saved!.sessionType).toBe(SessionType.HUMAN);
+    expect(saved!.status).toBe(SessionStatus.WAITING);
+  });
+
+  it('AI 正常回應 → 維持 BOT，不觸發 Discord', async () => {
+    mockChat.mockResolvedValueOnce({ message: 'AI 正常回覆', confidence: 0.9, responseId: 'resp-ok', processingTime: 10 });
+
+    const res = await request(app)
+      .post('/api/v1/smart-reply/session/start')
+      .send({ initialMessage: '一般問題', category: '一般諮詢' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.sessionType).toBe(SessionType.BOT);
+    expect(mockSendSupportRequest).not.toHaveBeenCalled();
+
+    createdSessionIds.push(res.body.data.sessionId);
   });
 });
 
