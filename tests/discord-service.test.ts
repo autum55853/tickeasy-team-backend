@@ -23,30 +23,34 @@ function makeSession(overrides: Record<string, unknown> = {}): InstanceType<type
   return Object.assign(s, overrides);
 }
 
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/test/token';
+const BOT_TOKEN = 'test-bot-token';
+const SUPPORT_CHANNEL_ID = '123456789';
 
 // ════════════════════════════════════════════════════════════════════════════
 // discordService.sendSupportRequest
 // ════════════════════════════════════════════════════════════════════════════
 
 describe('discordService.sendSupportRequest', () => {
-  const origEnv = process.env.DISCORD_SUPPORT_WEBHOOK_URL;
+  const origToken = process.env.DISCORD_BOT_TOKEN;
+  const origChannel = process.env.DISCORD_SUPPORT_CHANNEL_ID;
 
   beforeEach(() => {
     mockPost.mockReset();
-    process.env.DISCORD_SUPPORT_WEBHOOK_URL = WEBHOOK_URL;
+    process.env.DISCORD_BOT_TOKEN = BOT_TOKEN;
+    process.env.DISCORD_SUPPORT_CHANNEL_ID = SUPPORT_CHANNEL_ID;
   });
 
   afterAll(() => {
-    if (origEnv !== undefined) {
-      process.env.DISCORD_SUPPORT_WEBHOOK_URL = origEnv;
-    } else {
-      delete process.env.DISCORD_SUPPORT_WEBHOOK_URL;
-    }
+    const restore = (key: string, val: string | undefined) => {
+      if (val !== undefined) process.env[key] = val;
+      else delete process.env[key];
+    };
+    restore('DISCORD_BOT_TOKEN', origToken);
+    restore('DISCORD_SUPPORT_CHANNEL_ID', origChannel);
   });
 
-  it('DISCORD_SUPPORT_WEBHOOK_URL 未設定時回傳 null，不呼叫 axios', async () => {
-    delete process.env.DISCORD_SUPPORT_WEBHOOK_URL;
+  it('DISCORD_SUPPORT_CHANNEL_ID 未設定時回傳 null，不呼叫 axios', async () => {
+    delete process.env.DISCORD_SUPPORT_CHANNEL_ID;
 
     const result = await sendSupportRequest(makeSession(), '測試問題', []);
 
@@ -63,13 +67,16 @@ describe('discordService.sendSupportRequest', () => {
     expect(mockPost).toHaveBeenCalledTimes(1);
   });
 
-  it('請求 URL 包含 wait=true', async () => {
+  it('請求 URL 指向 Bot channel messages 端點，帶 Bot 授權標頭', async () => {
     mockPost.mockResolvedValue({ data: { id: 'msg-id' } });
 
     await sendSupportRequest(makeSession(), '問題', []);
 
-    const calledUrl = (mockPost.mock.calls[0] as unknown[])[0] as string;
-    expect(calledUrl).toContain('wait=true');
+    const call = mockPost.mock.calls[0] as unknown[];
+    const calledUrl = call[0] as string;
+    const config = call[2] as { headers: Record<string, string> };
+    expect(calledUrl).toBe(`https://discord.com/api/v10/channels/${SUPPORT_CHANNEL_ID}/messages`);
+    expect(config.headers.Authorization).toBe(`Bot ${BOT_TOKEN}`);
   });
 
   it('payload 包含正確的 custom_id（support_reply_<sessionId>）', async () => {

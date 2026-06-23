@@ -155,9 +155,12 @@ export async function sendSupportRequest(
   userMessage: string,
   recentMessages: SupportMessage[],
 ): Promise<string | null> {
-  const webhookUrl = process.env.DISCORD_SUPPORT_WEBHOOK_URL;
-  if (!webhookUrl) {
-    console.warn('[DiscordService] DISCORD_SUPPORT_WEBHOOK_URL 未設定，無法傳送客服請求');
+  // 必須用 Bot API 傳送，channel webhook 會靜默丟棄 components（按鈕），
+  // 導致管理員看不到「💬 回覆用戶」按鈕、無法開啟 Modal 回覆。
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
+  if (!botToken || !channelId) {
+    console.warn('[DiscordService] DISCORD_BOT_TOKEN 或 DISCORD_SUPPORT_CHANNEL_ID 未設定，無法傳送客服請求');
     return null;
   }
 
@@ -180,12 +183,11 @@ export async function sendSupportRequest(
   };
 
   try {
-    const url = webhookUrl.includes('?')
-      ? `${webhookUrl}&wait=true`
-      : `${webhookUrl}?wait=true`;
-    const response = await axios.post(url, payload, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const response = await axios.post(
+      `https://discord.com/api/v10/channels/${channelId}/messages`,
+      payload,
+      { headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' } },
+    );
     const messageId: string | undefined = response.data?.id;
     console.log(`[DiscordService] 客服請求已傳送 (session: ${session.supportSessionId}, messageId: ${messageId ?? 'unknown'})`);
     return messageId ?? null;
