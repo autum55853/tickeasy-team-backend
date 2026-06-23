@@ -160,10 +160,27 @@ export class SmartReplyController {
               createSession: false // 我們已經建立了業務會話
             });
 
-            finalMessage = aiReply.message;
-            confidence = aiReply.confidence;
-            strategy = 'openai_responses_api';
-            openaiResponseId = aiReply.responseId;
+            // AI 服務失效（chat 內部吞錯回傳道歉訊息，不會 throw）→ 主動偵測旗標轉人工
+            if (aiReply.aiUnavailable) {
+              console.warn('⚠️ AI 服務失效，自動轉送 Discord 人工客服');
+              try {
+                const msgId = await sendSupportRequest(session, initialMessage, []);
+                if (msgId) session.discordMessageId = msgId;
+                session.discordFallbackAt = getTaiwanTime();
+              } catch (fallbackErr) {
+                console.error('❌ Discord fallback 傳送失敗:', fallbackErr);
+              }
+              session.sessionType = SessionType.HUMAN;
+              session.status = SessionStatus.WAITING;
+              finalMessage = '抱歉，AI 系統暫時無法回應，您的問題已轉交人工客服，請稍候。';
+              confidence = 0.1;
+              strategy = 'discord_fallback';
+            } else {
+              finalMessage = aiReply.message;
+              confidence = aiReply.confidence;
+              strategy = 'openai_responses_api';
+              openaiResponseId = aiReply.responseId;
+            }
 
           } catch (error) {
             console.warn('⚠️ OpenAI Responses API 失敗，轉送 Discord 人工客服:', error);
@@ -171,6 +188,7 @@ export class SmartReplyController {
               const msgId = await sendSupportRequest(session, initialMessage, []);
               if (msgId) session.discordMessageId = msgId;
               session.discordFallbackAt = getTaiwanTime();
+              session.sessionType = SessionType.HUMAN;
               session.status = SessionStatus.WAITING;
             } catch (fallbackErr) {
               console.error('❌ Discord fallback 傳送失敗:', fallbackErr);
@@ -368,6 +386,7 @@ export class SmartReplyController {
             const msgId = await sendSupportRequest(session, message, recentMessages.reverse());
             if (msgId) session.discordMessageId = msgId;
             session.discordFallbackAt = getTaiwanTime();
+            session.sessionType = SessionType.HUMAN;
             session.status = SessionStatus.WAITING;
             await supportSessionRepo.save(session);
           } catch (fallbackErr) {
@@ -412,6 +431,7 @@ export class SmartReplyController {
           message: finalMessage,
           confidence: confidence,
           strategy: strategy,
+          sessionType: session.sessionType,
           sessionStatus: session.status
         }
       });
