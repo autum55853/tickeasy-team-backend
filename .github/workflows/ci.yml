@@ -87,6 +87,7 @@ jobs:
       DISCORD_PUBLIC_KEY: placeholder
       DISCORD_WEBHOOK_URL: placeholder
       DISCORD_SUPPORT_WEBHOOK_URL: placeholder
+      DISCORD_SUPPORT_CHANNEL_ID: placeholder
       PORT: 3000
 
     steps:
