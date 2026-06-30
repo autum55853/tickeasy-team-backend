@@ -21,7 +21,7 @@ interface ChatMessage {
   content: string;
 }
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_MAX_TOKENS = 2000;
 const GEMINI_TEMPERATURE = 0.2;
 

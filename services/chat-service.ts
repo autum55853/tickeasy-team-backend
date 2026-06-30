@@ -1,5 +1,5 @@
 /**
- * 聊天服務 (使用 Gemini 2.0 Flash-Lite)
+ * 聊天服務 (使用 Gemini 2.5 Flash)
  * 整合傳統客服會話與即時 AI 問答功能
  *
  * [OpenAI 原實作說明]
@@ -20,7 +20,7 @@ import { getTaiwanTime } from '../utils/date.js';
 
 dotenv.config();
 
-const GEMINI_MODEL = 'gemini-2.0-flash-lite';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export interface ChatOptions {
   sessionId?: string;
@@ -82,7 +82,7 @@ export class ChatService {
     }
 
     this.systemPrompt = this.buildSystemPrompt();
-    console.log('✅ 聊天服務初始化成功 (Gemini 2.0 Flash)');
+    console.log('✅ 聊天服務初始化成功 (Gemini 2.5 Flash)');
   }
 
   /**
