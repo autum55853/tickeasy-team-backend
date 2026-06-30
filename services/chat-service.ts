@@ -27,8 +27,6 @@ export interface ChatOptions {
   userId?: string;
   category?: string;
   createSession?: boolean;
-  // [OpenAI] previousResponseId?: string; — Responses API 狀態管理，Gemini 改用 DB 歷史重建，此欄位已棄用
-  previousResponseId?: string;
 }
 
 export interface ChatResponse {
@@ -451,8 +449,7 @@ export class ChatService {
    */
   async continueChat(
     userMessage: string,
-    previousResponseId: string, // [OpenAI] 已棄用，保留參數簽名供相容
-    options: Omit<ChatOptions, 'previousResponseId'> = {}
+    options: ChatOptions = {}
   ): Promise<ChatResponse> {
     const startTime = Date.now();
 
