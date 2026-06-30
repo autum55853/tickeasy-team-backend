@@ -112,8 +112,18 @@ REDIRECTURL=     # 付款完成重定向 URL
 CLEANUP_TEMP_IMAGES_HOURS=24  # 清理多少小時前的暫存圖片
 CLEANUP_INTERVAL_HOURS=6      # 每隔多少小時執行一次清理
 
-# OpenAI（管理後台用）
-OPENAI_API_KEY=
+# AI 智慧回覆 / 審核（Gemini）
+GEMINI_API_KEY=                  # Gemini API Key（AI 審核 / 智慧客服 / Embedding）
+OPENAI_API_KEY=                  # 已棄用，由 GEMINI_API_KEY 取代
+
+# Discord（演唱會審核 + AI 失效轉人工客服）
+DISCORD_BOT_TOKEN=               # Discord Bot Token
+DISCORD_APPLICATION_ID=          # 應用程式 ID（PATCH Interaction 用，非頻道 ID）
+DISCORD_PUBLIC_KEY=              # Ed25519 公鑰（驗證 Interaction 簽名，hex 字串）
+DISCORD_CHANNEL_ID=              # 審核頻道 ID（文字頻道）
+DISCORD_SUPPORT_CHANNEL_ID=      # 客服頻道 ID（文字頻道，AI 失效時 Bot API 傳送）
+# ⚠️ 三組 ID 皆為純數字 Snowflake：CHANNEL_ID 須為「文字頻道 ID」，
+#    別填成 APPLICATION_ID，否則 Bot API 回 404 Unknown Channel (code 10003)。
 ```
 
 ## 常用指令

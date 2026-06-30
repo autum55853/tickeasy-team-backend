@@ -18,6 +18,12 @@
   - 需在 GitHub Secrets 設定 `DISCORD_WEBHOOK`（Discord 頻道 Webhook URL）
 
 ### 修復
+- **[2026-06-24] AI 轉人工客服後 Discord 收不到訊息 — `404 Unknown Channel` (code 10003)**
+  - **根本原因**：`DISCORD_SUPPORT_CHANNEL_ID` 被誤設為 `DISCORD_APPLICATION_ID` 的值（兩者皆為純數字 Snowflake，容易混淆）。該值不是文字頻道 ID，Bot API POST `/channels/{id}/messages` 回 404。
+  - **辨識技巧**：Discord Bot Token 第一段 base64 解碼即為 Bot 的 Application/User ID；若 channel 路徑的數字與其相同，代表填到了 Application ID。
+  - **修復**：將 `DISCORD_SUPPORT_CHANNEL_ID` 改為真正的客服文字頻道 ID（開發者模式 → 右鍵頻道 → 複製頻道 ID），並確認 Bot 已加入該 server 且具 `View Channel` + `Send Messages` 權限。純設定修正，程式碼無異動。
+  - **三組易混淆的 Discord ID**：`DISCORD_CHANNEL_ID`（審核頻道）、`DISCORD_SUPPORT_CHANNEL_ID`（客服頻道）、`DISCORD_APPLICATION_ID`（應用程式 ID，非頻道）。
+
 - **[2026-05-16] Discord 審核按鈕點擊顯示「此交互失敗」**
   - **根本原因**：`discordController.ts` 在送回 HTTP 回應前先 `await concertReviewService.submitManualReview()`，DB 操作耗時 2.4s+，加上網路延遲超過 Discord Interaction 3 秒 deadline。
   - **修復**：改用 Deferred Response 模式——按鈕點擊後立即回應 `{ type: 6 }` (DEFERRED_UPDATE_MESSAGE)，再異步執行審核，完成後呼叫 `patchInteractionResponse()` PATCH `/webhooks/{APPLICATION_ID}/{token}/messages/@original` 更新訊息。

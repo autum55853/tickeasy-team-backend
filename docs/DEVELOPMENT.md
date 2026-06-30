@@ -119,12 +119,14 @@ throw ApiError.validation('表單驗證失敗', {
 | `GEMINI_API_KEY` | Gemini AI API Key（取代 OpenAI，用於 AI 審核 / 智慧客服 / Embedding） | 否 | — |
 | `OPENAI_API_KEY` | ~~已棄用~~ — 原 OpenAI API Key，已由 `GEMINI_API_KEY` 取代 | 否 | — |
 | `DISCORD_BOT_TOKEN` | Discord Bot Token，用於傳送審核訊息至頻道 | 否（Discord 功能） | — |
-| `DISCORD_CHANNEL_ID` | Discord 目標頻道 ID | 否（Discord 功能） | — |
+| `DISCORD_CHANNEL_ID` | Discord 演唱會**審核**頻道 ID（文字頻道） | 否（Discord 功能） | — |
 | `DISCORD_PUBLIC_KEY` | Discord 應用程式 Ed25519 公鑰，用於驗證 Interaction 簽名 | 否（Discord 功能） | — |
 | `DISCORD_APPLICATION_ID` | Discord 應用程式 ID，用於 PATCH Interaction 訊息（deferred response） | 否（Discord 功能） | — |
 | `DISCORD_WEBHOOK_URL` | Discord Webhook URL，演唱會審核通知 | 否（Discord 功能） | — |
 | `DISCORD_SUPPORT_WEBHOOK_URL` | （已棄用）改用 Bot API + `DISCORD_SUPPORT_CHANNEL_ID`；webhook 會靜默丟棄互動按鈕 | 否 | — |
-| `DISCORD_SUPPORT_CHANNEL_ID` | 客服支援頻道 ID，AI 失效時 Bot API 傳送客服請求（保留按鈕需求） | 否（Discord 功能） | — |
+| `DISCORD_SUPPORT_CHANNEL_ID` | 客服支援**頻道** ID（文字頻道），AI 失效時 Bot API 傳送客服請求（保留按鈕需求） | 否（Discord 功能） | — |
+
+> ⚠️ **三組 Discord ID 別填錯**：`DISCORD_CHANNEL_ID`（審核頻道）、`DISCORD_SUPPORT_CHANNEL_ID`（客服頻道）必須是**文字頻道 ID**（開發者模式 → 右鍵頻道 → 複製頻道 ID）；`DISCORD_APPLICATION_ID` 是**應用程式 ID**，非頻道。三者皆為純數字 Snowflake，若把 Application ID 填進 channel 變數，Bot API 會回 `404 Unknown Channel` (code 10003)。
 
 ## 常見陷阱
 

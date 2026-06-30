@@ -1,0 +1,40 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    - cron: '0 8 */5 * *'  # 每 5 天 08:00 UTC 執行
+  workflow_dispatch:         # 允許手動觸發
+
+jobs:
+  ping:
+    name: Ping Supabase
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Supabase REST API
+        id: ping
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/")
+          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+          echo "HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "Ping failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Notify Discord
+        if: always()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          title: "Supabase Keep-Alive"
+          description: |
+            **HTTP Status:** `${{ steps.ping.outputs.status }}`
+            **Result:** ${{ job.status == 'success' && '✅ Supabase 喚醒成功，資料庫維持活躍' || '❌ Ping 失敗，請檢查 Supabase 狀態' }}
+          url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          username: Supabase Bot
+          avatar_url: https://supabase.com/favicon/favicon-32x32.png
