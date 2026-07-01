@@ -26,6 +26,7 @@ export interface SmartReplyResponse {
   faq?: {
     answer: string;
     faqId?: string;
+    url?: string;
     relatedQuestions?: string[];
   };
   concertSearch?: {
@@ -55,6 +56,16 @@ export interface SmartReplyResponse {
     ruleId?: string;
     intentAnalysis?: IntentAnalysisResult; // 新增：意圖分析結果
   };
+}
+
+interface FaqMatch {
+  answer: string;
+  faqId?: string;
+  faqUrl?: string;
+  confidence: number;
+  matchedKeywords: string[];
+  relatedQuestions?: string[];
+  ruleId: string;
 }
 
 export class SmartReplyService {
@@ -89,6 +100,14 @@ export class SmartReplyService {
     
     try {
       console.log(`🤖 智能回覆處理: "${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}"`);
+
+      // 🥇 最優先：常見問答 (FAQ) — 任何提問先查 FAQ，命中即回並附導向連結
+      const topFaqMatch = await this.matchFAQ(userMessage);
+      if (topFaqMatch) {
+        await this.incrementViewCount(topFaqMatch.ruleId);
+        console.log(`🥇 FAQ 最優先命中: ${topFaqMatch.ruleId}`);
+        return this.buildFaqReply(topFaqMatch, startTime);
+      }
 
       // 🎯 第一階段：統一意圖分析
       const intentResult = await intentClassificationService.analyzeIntent(userMessage);
@@ -211,33 +230,14 @@ export class SmartReplyService {
       };
     }
 
-    // 2. 常見問答匹配 (中等優先級)
-    const faqMatch = await this.matchFAQ(userMessage);
-    if (faqMatch) {
-      await this.incrementViewCount(faqMatch.ruleId);
-      
-      return {
-        type: 'faq',
-        message: faqMatch.answer + (faqMatch.relatedQuestions?.length ? 
-          `\n\n**您可能也想了解：**\n${faqMatch.relatedQuestions.map(q => `• ${q}`).join('\n')}` : ''),
-        faq: {
-          answer: faqMatch.answer,
-          faqId: faqMatch.faqId,
-          relatedQuestions: faqMatch.relatedQuestions
-        },
-        data: { confidence: faqMatch.confidence },
-        metadata: {
-          matchedKeywords: faqMatch.matchedKeywords,
-          processingTime: Date.now() - startTime,
-          strategy: 'faq_match',
-          ruleId: faqMatch.ruleId,
-          intentAnalysis: intentResult
-        }
-      };
-    }
+    // 2. 常見問答匹配已在 getSmartReply 頂層最優先處理，此處不再重複
 
-    // 3. 演唱會搜索 (如果還沒處理過)
-    if (!intentResult || intentResult.primaryIntent !== IntentType.CONCERT) {
+    // 3. 演唱會搜索 (僅在無意圖或意圖為未知時嘗試)
+    //    CONCERT 意圖已在第二階段處理過；GENERAL_SERVICE / FOOD / HOTEL / TRANSPORT
+    //    等明確非演唱會意圖不應被演唱會搜尋攔截（例如「退票規定」屬客服問題）
+    const concertSearchAllowed = !intentResult
+      || intentResult.primaryIntent === IntentType.UNKNOWN;
+    if (concertSearchAllowed) {
       const concertMatch = await this.tryConcertSearch(userMessage);
       if (concertMatch) {
         concertMatch.metadata.intentAnalysis = intentResult;
@@ -331,14 +331,7 @@ export class SmartReplyService {
   /**
    * 匹配常見問答 (從資料庫)
    */
-  private async matchFAQ(userMessage: string): Promise<{
-    answer: string;
-    faqId?: string;
-    confidence: number;
-    matchedKeywords: string[];
-    relatedQuestions?: string[];
-    ruleId: string;
-  } | null> {
+  private async matchFAQ(userMessage: string): Promise<FaqMatch | null> {
     try {
       // 從資料庫獲取所有 FAQ 規則
       const faqRules = await this.knowledgeBaseRepo.find({
@@ -369,6 +362,7 @@ export class SmartReplyService {
           bestMatch = {
             answer: rule.faqAnswer || rule.content,
             faqId: rule.ruleId!,
+            faqUrl: rule.faqUrl || undefined,
             confidence: Math.min(score, 0.95),
             matchedKeywords,
             relatedQuestions: rule.relatedQuestions,
@@ -383,6 +377,48 @@ export class SmartReplyService {
       console.error('❌ FAQ 匹配失敗:', error);
       return null;
     }
+  }
+
+  /**
+   * 組裝 FAQ 回覆（含專屬導向連結）
+   */
+  private buildFaqReply(
+    faqMatch: FaqMatch,
+    startTime: number,
+    intentResult?: IntentAnalysisResult
+  ): SmartReplyResponse {
+    // 有 faqUrl 時組完整 URL（相對路徑才拼接前端 base URL）並追加 markdown 連結
+    let fullUrl: string | undefined;
+    if (faqMatch.faqUrl) {
+      const baseUrl = this.getFrontendBaseUrl();
+      fullUrl = baseUrl && faqMatch.faqUrl.startsWith('/')
+        ? `${baseUrl}${faqMatch.faqUrl}`
+        : faqMatch.faqUrl;
+    }
+
+    const relatedBlock = faqMatch.relatedQuestions?.length
+      ? `\n\n**您可能也想了解：**\n${faqMatch.relatedQuestions.map(q => `• ${q}`).join('\n')}`
+      : '';
+    const linkBlock = fullUrl ? `\n\n👉 [查看詳細說明](${fullUrl})` : '';
+
+    return {
+      type: 'faq',
+      message: faqMatch.answer + relatedBlock + linkBlock,
+      faq: {
+        answer: faqMatch.answer,
+        faqId: faqMatch.faqId,
+        url: fullUrl,
+        relatedQuestions: faqMatch.relatedQuestions
+      },
+      data: { confidence: faqMatch.confidence },
+      metadata: {
+        matchedKeywords: faqMatch.matchedKeywords,
+        processingTime: Date.now() - startTime,
+        strategy: 'faq_match',
+        ruleId: faqMatch.ruleId,
+        intentAnalysis: intentResult
+      }
+    };
   }
 
   /**
@@ -570,11 +606,18 @@ export class SmartReplyService {
   private isConcertRelatedQuery(userMessage: string): boolean {
     const lowerMessage = userMessage.toLowerCase();
     console.log(`🎵 檢測演唱會意圖: "${userMessage}"`);
-    
-    // 演唱會核心關鍵字
+
+    // 客服票務詞（退票/退款等）屬一般客服，優先排除，避免被 '票' 類關鍵字誤判為演唱會查詢
+    const customerServiceExclusions = ['退票', '退款', '退費', '退錢', '取消訂單', '改期', '轉讓'];
+    if (customerServiceExclusions.some(keyword => lowerMessage.includes(keyword))) {
+      console.log('  ❌ 命中客服票務排除詞，非演唱會查詢');
+      return false;
+    }
+
+    // 演唱會核心關鍵字（不含裸 '票'：'退票/取票/我的票券' 等客服詞含 '票'，須用更明確的購票詞）
     const concertKeywords = [
       '演唱會', '音樂會', '演出', '演奏會', '音樂節', '表演', '現場演出',
-      '票', '購票', '買票', '訂票', '票價', '售票', '門票',
+      '購票', '買票', '訂票', '票價', '售票', '門票',
       '演唱', '唱歌', '歌手', '藝人', '歌星', '明星', '偶像',
       '場地', '體育場', '巨蛋', '小巨蛋', '演藝廳', '音樂廳', '場館',
       '座位', '位子', 'vip', '搖滾區', '看台',
