@@ -160,6 +160,8 @@ bin/server.ts
 | POST | `/session/:sessionId/transfer` | optionalAuth | 申請人工轉接 |
 | POST | `/session/:sessionId/close` | optionalAuth | 關閉會話 |
 
+**`/reply` 匹配流程**：FAQ（全域最優先，附 `faqUrl` 導向連結）→ 意圖分類 → 圖文教學（`tutorialUrl`）→ 演唱會搜尋（僅無 / 未知意圖）→ 知識庫語意搜尋 → 中性回答。規則存於 `supportKnowledgeBase`（種子 `config/smart-reply-rules.ts`），連結存相對路徑，runtime 以 `FRONTEND_URL` 拼接。
+
 ### 知識庫 `/api/v1/knowledge-base`
 
 | 方法 | 路徑 | 認證 | 說明 |

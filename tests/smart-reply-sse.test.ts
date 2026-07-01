@@ -22,8 +22,8 @@ jest.unstable_mockModule('../services/discordService.js', () => ({
 // Mock chatService — 避免真實 OpenAI 呼叫
 const mockChat = jest.fn<() => Promise<{ message: string; confidence: number; responseId: string | null; processingTime: number; aiUnavailable?: boolean }>>()
   .mockResolvedValue({ message: 'AI 回覆', confidence: 0.9, responseId: 'resp-abc', processingTime: 100 });
-const mockContinueChat = jest.fn<() => Promise<{ message: string; confidence: number; responseId: string | null }>>()
-  .mockResolvedValue({ message: 'AI 延續回覆', confidence: 0.85, responseId: null });
+const mockContinueChat = jest.fn<() => Promise<{ message: string; confidence: number; responseId: string | null; processingTime?: number; aiUnavailable?: boolean }>>()
+  .mockResolvedValue({ message: 'AI 延續回覆', confidence: 0.85, responseId: '' });
 const mockCheckServiceStatus = jest.fn<() => Promise<{ ok: boolean }>>().mockResolvedValue({ ok: true });
 jest.unstable_mockModule('../services/chat-service.js', () => ({
   chatService: {
@@ -273,6 +273,98 @@ describe('POST /session/:sessionId/message — sessionType=HUMAN 短路', () => 
       .send({ message: '測試' });
 
     expect(res.status).toBe(404);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// POST /session/:sessionId/message — BOT 模式延續對話（rules-first → neutral 才走 Gemini）
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('POST /session/:sessionId/message — BOT 模式延續對話', () => {
+  let botSession: SupportSession;
+
+  beforeEach(async () => {
+    botSession = await createSession({
+      sessionType: SessionType.BOT,
+      status: SessionStatus.ACTIVE,
+    });
+    mockSendSupportRequest.mockClear();
+    mockContinueChat.mockClear();
+    mockGetSmartReply.mockClear();
+    // 預設關鍵字匹配 neutral → 進入 Gemini 延續分支
+    mockGetSmartReply.mockResolvedValue({ type: 'neutral', message: '請問有什麼可以幫助您？', data: { confidence: 0.1 } });
+    mockContinueChat.mockResolvedValue({ message: 'AI 延續回覆', confidence: 0.85, responseId: '' });
+  });
+
+  afterEach(async () => {
+    await cleanupSession(botSession.supportSessionId);
+  });
+
+  it('neutral → 呼叫 continueChat，回傳 strategy=gemini_continue', async () => {
+    const res = await request(app)
+      .post(`/api/v1/smart-reply/session/${botSession.supportSessionId}/message`)
+      .send({ message: '我想多了解一下' });
+
+    expect(res.status).toBe(200);
+    expect(mockContinueChat).toHaveBeenCalled();
+    expect(res.body.data.strategy).toBe('gemini_continue');
+    expect(res.body.data.message).toBe('AI 延續回覆');
+  });
+
+  it('關鍵字命中（非 neutral）→ 不呼叫 continueChat，直接回關鍵字結果', async () => {
+    mockGetSmartReply.mockResolvedValueOnce({
+      type: 'tutorial',
+      message: '退票教學內容',
+      data: { confidence: 0.95 },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/smart-reply/session/${botSession.supportSessionId}/message`)
+      .send({ message: '如何退票' });
+
+    expect(res.status).toBe(200);
+    expect(mockContinueChat).not.toHaveBeenCalled();
+    expect(res.body.data.strategy).toBe('keyword_matching');
+    expect(res.body.data.message).toBe('退票教學內容');
+  });
+
+  it('continueChat 回傳 aiUnavailable → sessionType=HUMAN 且 Discord 被呼叫', async () => {
+    mockContinueChat.mockResolvedValueOnce({
+      message: '抱歉，系統暫時無法處理您的請求',
+      confidence: 0,
+      responseId: '',
+      aiUnavailable: true,
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/smart-reply/session/${botSession.supportSessionId}/message`)
+      .send({ message: '一般問題' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.strategy).toBe('discord_fallback');
+    expect(mockSendSupportRequest).toHaveBeenCalled();
+
+    const repo = AppDataSource.getRepository(SupportSession);
+    const saved = await repo.findOne({ where: { supportSessionId: botSession.supportSessionId } });
+    expect(saved!.sessionType).toBe(SessionType.HUMAN);
+    expect(saved!.status).toBe(SessionStatus.WAITING);
+  });
+
+  it('continueChat throw → 轉 Discord 人工（discord_fallback）', async () => {
+    mockContinueChat.mockRejectedValueOnce(new Error('Gemini API 失敗'));
+
+    const res = await request(app)
+      .post(`/api/v1/smart-reply/session/${botSession.supportSessionId}/message`)
+      .send({ message: '一般問題' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.strategy).toBe('discord_fallback');
+    expect(mockSendSupportRequest).toHaveBeenCalled();
+
+    const repo = AppDataSource.getRepository(SupportSession);
+    const saved = await repo.findOne({ where: { supportSessionId: botSession.supportSessionId } });
+    expect(saved!.sessionType).toBe(SessionType.HUMAN);
+    expect(saved!.status).toBe(SessionStatus.WAITING);
   });
 });
 

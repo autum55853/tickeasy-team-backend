@@ -344,38 +344,52 @@ export class SmartReplyController {
       }
 
       // === 下層：AI 回覆處理 ===
-      let finalMessage;
-      let confidence = 0;
+      // 1. 優先使用關鍵字匹配（與 startSession 一致）
+      const smartReply = await smartReplyService.getSmartReply(message);
+      let finalMessage = smartReply.message;
+      let confidence = smartReply.data?.confidence || 0;
       let strategy = 'keyword_matching';
 
-      // 獲取最後一個 OpenAI Response ID 用於對話延續
-      const lastBotMessage = await supportMessageRepo.findOne({
-        where: {
-          sessionId: session.supportSessionId,
-          senderType: SenderType.BOT
-        },
-        order: { createdAt: 'DESC' }
-      });
-
-      const previousOpenAIResponseId = lastBotMessage?.metadata?.responseId;
-
-      if (previousOpenAIResponseId) {
+      // 2. 關鍵字匹配失敗（neutral）→ 延續 Gemini 對話（history 由 chat-service 從 DB 重建）
+      if (smartReply.type === 'neutral') {
         try {
-          console.log(`🔗 延續 OpenAI 對話 - Previous Response ID: ${previousOpenAIResponseId}`);
-          
-          // 使用 OpenAI Responses API 的對話延續功能
-          const aiReply = await chatService.continueChat(message, previousOpenAIResponseId, {
+          console.log('🧠 關鍵字匹配失敗，延續 Gemini 對話');
+
+          const aiReply = await chatService.continueChat(message, {
             sessionId: session.supportSessionId,
             userId: userId,
             category: session.category
           });
 
-          finalMessage = aiReply.message;
-          confidence = aiReply.confidence;
-          strategy = 'openai_continue';
+          // AI 服務失效（continueChat 內部吞錯回傳道歉訊息，不會 throw）→ 主動偵測旗標轉人工
+          if (aiReply.aiUnavailable) {
+            console.warn('⚠️ AI 服務失效，自動轉送 Discord 人工客服');
+            try {
+              const recentMessages = await supportMessageRepo.find({
+                where: { sessionId: session.supportSessionId },
+                order: { createdAt: 'DESC' },
+                take: 5,
+              });
+              const msgId = await sendSupportRequest(session, message, recentMessages.reverse());
+              if (msgId) session.discordMessageId = msgId;
+              session.discordFallbackAt = getTaiwanTime();
+              session.sessionType = SessionType.HUMAN;
+              session.status = SessionStatus.WAITING;
+              await supportSessionRepo.save(session);
+            } catch (fallbackErr) {
+              console.error('❌ Discord fallback 傳送失敗:', fallbackErr);
+            }
+            finalMessage = '抱歉，AI 系統暫時無法回應，您的問題已轉交人工客服，請稍候。';
+            confidence = 0.1;
+            strategy = 'discord_fallback';
+          } else {
+            finalMessage = aiReply.message;
+            confidence = aiReply.confidence;
+            strategy = 'gemini_continue';
+          }
 
         } catch (error) {
-          console.warn('⚠️ OpenAI 對話延續失敗，轉送 Discord 人工客服:', error);
+          console.warn('⚠️ Gemini 對話延續失敗，轉送 Discord 人工客服:', error);
 
           try {
             const recentMessages = await supportMessageRepo.find({
@@ -397,14 +411,6 @@ export class SmartReplyController {
           confidence = 0.1;
           strategy = 'discord_fallback';
         }
-      } else {
-        console.log('🔍 沒有 OpenAI Response ID，使用關鍵字匹配');
-        
-        // 沒有 OpenAI 對話歷史，使用關鍵字匹配
-        const smartReply = await smartReplyService.getSmartReply(message);
-        finalMessage = smartReply.message;
-        confidence = smartReply.data?.confidence || 0;
-        strategy = 'keyword_matching';
       }
 
       // 儲存 AI 回覆

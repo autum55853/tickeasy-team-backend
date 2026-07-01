@@ -48,6 +48,9 @@ export class SupportKnowledgeBase {
   @Column({ type: 'text', nullable: true })
   faqAnswer: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  faqUrl: string; // FAQ 專屬導向連結（可為相對路徑或完整 URL）
+
   @Column({ type: 'text', array: true, default: [] })
   relatedQuestions: string[];
 
@@ -256,10 +259,13 @@ export class SupportKnowledgeBase {
     return this.content;
   }
 
-  // 取得回覆 URL（如果是教學類型）
+  // 取得回覆 URL（教學類型回 tutorialUrl，FAQ 類型回 faqUrl）
   getReplyUrl(): string | null {
     if (this.isTutorial && this.tutorialUrl) {
       return this.tutorialUrl;
+    }
+    if (this.isFAQ && this.faqUrl) {
+      return this.faqUrl;
     }
     return null;
   }
