@@ -12,12 +12,23 @@
 
 ## 🎯 基本概念
 
-智能回覆系統採用**分層匹配策略**：
+智能回覆系統採用**分層匹配策略**（`getSmartReply`）：
 
-1. **圖文教學** (最高優先級) - 完整流程教學
-2. **常見問答** (中等優先級) - 快速文字回答
-3. **知識庫搜尋** (補充功能) - 動態內容搜尋
-4. **中性回答** (最後手段) - 提供客服聯絡方式
+1. **常見問答（FAQ）** (🥇 全域最優先) - 任何提問先比對 FAQ，命中即回並附專屬導向連結（`faqUrl`）
+2. **意圖分類** - 關鍵字匹配（選填 AI 增強），路由至演唱會 / 美食 / 住宿 / 交通 / 一般客服
+3. **圖文教學** (傳統層級最高) - 完整流程教學，附教學連結（`tutorialUrl`）
+4. **演唱會搜尋** - 僅在無意圖或未知意圖時嘗試（避免「退票規定」等客服問題被誤攔）
+5. **知識庫搜尋** (補充功能) - 動態語意搜尋
+6. **中性回答** (最後手段) - 提供客服聯絡方式
+
+> **FAQ 為何最優先**：使用者提問應先命中結構化 FAQ 並拿到導向連結，未達關鍵字門檻（score < 0.2）才續行後續層級。
+
+### 📦 規則儲存與生效方式
+
+- 規則**實際存放於資料庫**（`supportKnowledgeBase` 資料表），runtime 由 `matchFAQ` / `matchTutorial` 從 DB 讀取，**非**直接讀 `config/smart-reply-rules.ts`。
+- `config/smart-reply-rules.ts` 為**規則種子來源**（`SMART_REPLY_RULES`），供人工維護與匯入 DB 使用。
+- 連結（`tutorialUrl` / `faqUrl`）以**相對路徑**（`/question/detail?faqType=...&question=...`）儲存，runtime 由 `FRONTEND_URL` 環境變數動態拼接完整網址。
+- 新增 / 修改規則後，需將變更同步寫入 DB 才會生效（重啟服務不會自動匯入 config）。
 
 ## 🎨 關鍵字設計原則
 
@@ -196,9 +207,14 @@ keywords: ["門票購買", "買票流程", "購票方式"];
 
 付款完成後，您將立即收到確認郵件和電子票券。`,
   priority: 1,
-  faqId: 'payment-methods'
+  faqId: 'payment-methods',
+  // FAQ 專屬導向連結（相對路徑，runtime 以 FRONTEND_URL 拼接完整網址）
+  // 對應資料庫 supportKnowledgeBase.faqUrl 欄位；命中後回覆末尾附「👉 [查看詳細說明](...)」
+  faqUrl: '/question/detail?faqType=ticket&question=paymentMethod'
 }
 ```
+
+> `faqUrl` 對應前端 FAQ 頁面深連結，格式 `/question/detail?faqType=<concert|ticket|member>&question=<param>`（param 見前端 `questionDetailSidebar.tsx`）。無對應頁面的 FAQ 可省略 `faqUrl`，回覆維持純文字。
 
 ## 🧪 測試與優化
 

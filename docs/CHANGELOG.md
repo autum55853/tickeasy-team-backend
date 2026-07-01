@@ -3,6 +3,13 @@
 ## [未發布]
 
 ### 新增
+- **[2026-07-01] 智慧客服 FAQ 全域最優先 + 專屬導向連結**
+  - `getSmartReply` 於意圖分析**之前**先跑 `matchFAQ`，任何提問先比對 FAQ，命中即回並附導向連結；`processTraditionalReply` 移除重複的 FAQ 區塊
+  - `supportKnowledgeBase` 新增 `faqUrl` 欄位（migration `AddFaqUrlToSupportKB`）；`getReplyUrl()` 擴充支援 FAQ 類型
+  - 新增 `buildFaqReply` helper：連結相對路徑（`/question/detail?faqType=...&question=...`）由 `FRONTEND_URL` 動態拼接完整網址，回覆末尾附 `👉 [查看詳細說明](...)`
+  - 一併修正「退票規定」等客服問題被演唱會搜尋誤攔（意圖守門 + `isConcertRelatedQuery` 排除退票 / 退款 / 改期等客服詞）
+  - **資料補齊**：`supportKnowledgeBase` 原為 0 筆，已將 `config/smart-reply-rules.ts`（`SMART_REPLY_RULES`，16 條）seed 進 DB，URL 轉相對路徑；規則存 DB、種子存 config，兩者需手動同步
+
 - **[2026-05-12] OpenAI → Gemini AI 全面遷移**
   - 新增 `services/geminiService.ts`，實作與 `openaiService` 相同介面（`AIReviewResponse`、`getChatCompletion`、`reviewConcert`、`testConnection`）
   - `embedding-service.ts`：改用 Gemini `text-embedding-004`（768 維，原 OpenAI 1536 維）；向量以 JSONB 儲存，無需 DB schema 遷移

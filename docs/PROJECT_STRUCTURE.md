@@ -38,7 +38,7 @@
 |------|------|
 | `database.ts` | TypeORM `AppDataSource` 設定（PostgreSQL 連線、entity glob 掃描、migration 路徑）；`connectToDatabase()` 初始化函式；`synchronize: false` 確保不自動改 schema |
 | `passport.ts` | Google OAuth 2.0 策略設定（`passport-google-oauth20`）：新用戶自動建立、既有用戶更新 token、`oauthProviders` JSONB 欄位管理 |
-| `smart-reply-rules.ts` | 智能客服回覆規則設定檔：定義 `SmartReplyRule` 介面與 `SMART_REPLY_RULES` 陣列，支援 `tutorial`（圖文教學）與 `faq`（問答）兩種回覆類型 |
+| `smart-reply-rules.ts` | 智能客服回覆規則**種子來源**：定義 `SmartReplyRule` 介面與 `SMART_REPLY_RULES` 陣列，支援 `tutorial`（圖文教學）與 `faq`（問答）兩種類型。runtime 實際從 DB `supportKnowledgeBase` 讀取；此檔供維護與匯入 |
 | `concert-reply-rules.ts` | 演唱會專屬智能回覆規則：針對演唱會查詢、推薦等關鍵字的預設回覆內容 |
 
 ---
@@ -133,7 +133,7 @@
 | `openaiService.ts` | OpenAI API 封裝：演唱會內容審核（`AIReviewResponse`），依據 `reviewRulesService` 規則建立 prompt |
 | `reviewRulesService.ts` | 審核規則設定服務：定義內容審核標準（敏感詞、虛假宣傳、價格合理性等） |
 | `chat-service.ts` | 聊天服務：整合 OpenAI Responses API 與 Supabase，管理客服會話與訊息 |
-| `smart-reply-service.ts` | 智能回覆分層策略：關鍵字過濾 → 圖文教學 → 語義搜尋 → AI 回覆 |
+| `smart-reply-service.ts` | 智能回覆分層策略：FAQ（全域最優先，附 `faqUrl` 連結）→ 意圖分類 → 圖文教學 → 演唱會搜尋 → 語義搜尋 → 中性回答 |
 | `intent-classification-service.ts` | 意圖識別：使用 OpenAI 分析使用者查詢意圖（演唱會/美食/住宿/交通/一般客服） |
 | `concert-search-service.ts` | 演唱會搜尋：支援藝人名、地區、時間、場地等多維度查詢（供客服系統使用） |
 | `knowledge-base-service.ts` | 知識庫管理：CRUD + 觸發 embedding 計算 |

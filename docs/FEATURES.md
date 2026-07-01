@@ -385,10 +385,13 @@
 **必填**：`message`（string）  
 **選填**：`enableAI`（boolean，預設 false）
 
-**業務邏輯**：
-1. 意圖分類（關鍵字匹配 → 選填 AI 增強）
-2. 命中知識庫語意搜尋（Gemini `text-embedding-004`，768 維）
-3. `enableAI=true` 時呼叫 Gemini 生成自然語言回覆，否則直接回傳知識庫摘要
+**業務邏輯**（分層匹配，命中即回）：
+1. **常見問答（FAQ）全域最優先** — `matchFAQ` 從 `supportKnowledgeBase` 讀 FAQ 規則做關鍵字評分（門檻 0.2），命中即回並附專屬導向連結 `faqUrl`（回覆末尾 `👉 [查看詳細說明](...)`）
+2. 意圖分類（關鍵字匹配 → 選填 AI 增強），路由至演唱會 / 美食 / 住宿 / 交通 / 一般客服
+3. 傳統層級：圖文教學（`tutorialUrl` 連結）→ 演唱會搜尋（僅無意圖 / 未知意圖，避免「退票規定」等客服問題被誤攔）→ 知識庫語意搜尋（Gemini `text-embedding-004`，768 維）→ 中性回答
+4. `enableAI=true` 時可呼叫 Gemini 生成自然語言回覆
+
+> 規則存於 DB（`supportKnowledgeBase`），種子來源 `config/smart-reply-rules.ts`。連結以相對路徑儲存，runtime 由 `FRONTEND_URL` 拼接完整網址。
 
 ### 8.2 會話管理
 

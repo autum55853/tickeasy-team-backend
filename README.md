@@ -14,6 +14,7 @@
 | 演唱會 | 搜尋 / 篩選 / 分頁、熱門演唱會、首頁 Banner | ✅ 完成 |
 | 演唱會 | visitCount 計數、promotion 權重管理（Admin） | ✅ 完成 |
 | 圖片 | Multer + Sharp 上傳、Supabase Storage 儲存、暫存清理 | ✅ 完成 |
+| 智慧客服 | Gemini 智能回覆、FAQ 全域最優先 + 導向連結、意圖分類、知識庫語意搜尋 | ✅ 完成 |
 | 訂單 | 訂單流程 | 🔧 進行中 |
 | 金流 | ECPay 綠界支付 | 🔧 進行中 |
 
@@ -99,7 +100,7 @@ GOOGLE_GMAIL_CLIENT_SECRET=      # Gmail 寄信專用 Google OAuth Client Secret
 GOOGLE_OAUTH_CLIENT_ID=          # OAuth 登入專用 Client ID
 GOOGLE_OAUTH_CLIENT_SECRET=      # OAuth 登入專用 Client Secret
 GOOGLE_OAUTH_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback
-FRONTEND_URL=http://localhost:3010  # 登入成功後重定向的前端網址
+FRONTEND_URL=http://localhost:3010  # 前端網址（OAuth 登入重定向 + 智慧客服 FAQ/教學連結拼接）
 
 # 綠界 ECPay 金流
 MERCHANTID=
