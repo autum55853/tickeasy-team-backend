@@ -35,6 +35,10 @@ import healthRouter from './routes/health.js';
 
 const app = express();
 
+// Render 部署在反向代理之後，信任第一層 proxy 才能從 X-Forwarded-For 取得真實 client IP
+// （rate limiting 依 IP 計數，未設定時所有請求會共用同一個限流桶）
+app.set('trust proxy', 1);
+
 // 未捕獲的異常處理（測試環境不 exit，避免殺死 Jest worker）
 process.on('uncaughtException', (err) => {
   console.error('未捕獲的異常:', err);
