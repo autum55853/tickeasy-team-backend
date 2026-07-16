@@ -41,7 +41,6 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
   }
 
   const ticketTypeRepository = AppDataSource.getRepository(TicketTypeEntity);
-  const orderRepository = AppDataSource.getRepository(Order);
 
   const selectedTicket = await ticketTypeRepository.findOne({
     where: { ticketTypeId },
@@ -57,40 +56,50 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     throw ApiError.outOfTimeRange(selectedTicket.ticketTypeName);
   }
 
-  // 扣庫存
-  const updateResult = await ticketTypeRepository
-    .createQueryBuilder()
-    .update(TicketTypeEntity)
-    .set({ remainingQuantity: () => 'remainingQuantity - 1' })
-    .where('ticketTypeId = :id', { id: ticketTypeId })
-    .andWhere('remainingQuantity > 0')
-    .execute();
-
-  if (!updateResult.affected || updateResult.affected === 0) {
-    throw ApiError.dataConstraintViolation('票券已售罄');
-  }
-
   // 設定 lock 時間（15 分鐘後過期）
   const lockExpireTime = new Date(now.getTime() + 15 * 60 * 1000);
 
-  // 創建新訂單（createdAt/updatedAt 由 @BeforeInsert 自動設定台灣時間）
-  const newOrder = orderRepository.create({
-    ticketTypeId,
-    userId: authenticatedUser.userId,
-    orderStatus: 'held' as OrderStatus,
-    isLocked: true,
-    lockToken: uuidv4(),
-    lockExpireTime,
-    purchaserName,
-    purchaserEmail,
-    purchaserPhone,
+  // 扣庫存 → 建訂單 包在同一個 transaction：任一步失敗全部 rollback，
+  // 避免「庫存已扣、訂單未建立」的資料不一致
+  const savedOrder = await AppDataSource.transaction(async (manager) => {
+    const txTicketTypeRepository = manager.getRepository(TicketTypeEntity);
+    const txOrderRepository = manager.getRepository(Order);
+
+    // 扣庫存（原子條件式 UPDATE，維持 remainingQuantity > 0 檢查，避免超賣）
+    const updateResult = await txTicketTypeRepository
+      .createQueryBuilder()
+      .update(TicketTypeEntity)
+      .set({ remainingQuantity: () => 'remainingQuantity - 1' })
+      .where('ticketTypeId = :id', { id: ticketTypeId })
+      .andWhere('remainingQuantity > 0')
+      .execute();
+
+    if (!updateResult.affected || updateResult.affected === 0) {
+      throw ApiError.dataConstraintViolation('票券已售罄');
+    }
+
+    // orderId 預先產生 + orderNumber 於 create 時一併生成，
+    // 合併原本「save 後再 update orderNumber」的兩次寫入
+    const orderId = uuidv4();
+    const orderNumber = generateOrderNumber(now, orderId);
+
+    // 創建新訂單（createdAt/updatedAt 由 @BeforeInsert 自動設定台灣時間）
+    const newOrder = txOrderRepository.create({
+      orderId,
+      ticketTypeId,
+      userId: authenticatedUser.userId,
+      orderStatus: 'held' as OrderStatus,
+      isLocked: true,
+      lockToken: uuidv4(),
+      lockExpireTime,
+      purchaserName,
+      purchaserEmail,
+      purchaserPhone,
+      orderNumber,
+    });
+
+    return txOrderRepository.save(newOrder);
   });
-
-  const savedOrder = await orderRepository.save(newOrder);
-
-  // 生成 orderNumber，並立即更新
-  const orderNumber = generateOrderNumber(savedOrder.createdAt, savedOrder.orderId);
-  await orderRepository.update(savedOrder.orderId, { orderNumber });
 
   // console.log(`✅ 訂單 ${savedOrder.orderId} 創建成功`);
 
