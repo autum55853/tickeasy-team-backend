@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import helmet from 'helmet';
 import cors from 'cors';
+import compression from 'compression';
 
 // 確保模型初始化
 import './models/index.js';
@@ -63,6 +64,16 @@ app.set('view engine', 'ejs');
 
 // 中間件設置
 app.use(helmet());
+// SSE（text/event-stream）不可壓縮：zlib 會緩衝事件導致即時推播卡住
+app.use(compression({
+  filter: (req, res) => {
+    const contentType = String(res.getHeader('Content-Type') ?? '');
+    if (contentType.includes('text/event-stream')) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+}));
 
 // CORS 配置
 const corsOptions = {
@@ -114,7 +125,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(morgan('dev'));
+// production 用 combined（含 IP/UA，適合日誌分析），開發用 dev（彩色精簡）
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Discord Interactions 路由必須在 express.json() 前掛載，以取得原始 Buffer 供 Ed25519 簽名驗證
 app.use('/api/v1/discord', discordRouter);

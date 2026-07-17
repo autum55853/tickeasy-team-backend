@@ -101,7 +101,6 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     return txOrderRepository.save(newOrder);
   });
 
-  // console.log(`✅ 訂單 ${savedOrder.orderId} 創建成功`);
 
   return res.status(200).json({
     status: 'success',
@@ -123,8 +122,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   // const authenticatedUser = req.user as Express.User; // 從 middleware 拿到 userId
   const authenticatedUser = req.user as { userId: string; role: string; email: string; };
 
-  // console.log('order:', orderId);
-  // console.log('authenticatedUser:', authenticatedUser);
 
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -147,7 +144,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     throw ApiError.forbidden();
   }
 
-  // console.log('order:', selectedOrder);
   const ticketTypeRepository = AppDataSource.getRepository(TicketTypeEntity);
   const ticketType = await ticketTypeRepository.findOneBy({ ticketTypeId: selectedOrder.ticketTypeId });
   if (!ticketType) {
@@ -164,8 +160,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   refundDeadline.setDate(refundDeadline.getDate() - 7);
   const now = getTaiwanTime();
   const afterRefundDeadline = now > refundDeadline;
-  console.log('now:',now);
-  console.log('refundDeadline:',refundDeadline);
 
   if (afterRefundDeadline) {
     throw ApiError.create(403, '此訂單不可退款', ErrorCode.AUTH_FORBIDDEN);
@@ -177,7 +171,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     relations: [ 'order' ]
   });
 
-  // console.log(selectedPayment);
   if (!selectedPayment) {
     throw ApiError.notFound('支付記錄');
   }
@@ -187,7 +180,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   }
 
   let TradeNo = selectedPayment.tradeNo;
-  // console.log(TradeNo);
   
   if (TradeNo === ''){
     throw ApiError.notFound('綠界交易編號');
@@ -204,7 +196,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   };
 
   data.CheckMacValue = generateCheckMacValue(data);
-  // console.log(data);
   const apiUrl = 'https://payment-stage.ecpay.com.tw/CreditDetail/DoAction';
   
   try {
@@ -221,7 +212,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     if (response.status !== 200) {
       throw new Error(`HTTP Error: ${response.status}`);
     }
-    console.log(response.data);
     const result: Record<string, string> = {};
     const pairs = response.data.split('&');
     
@@ -231,36 +221,27 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
         result[decodeURIComponent(key)] = decodeURIComponent(value);
       }
     }
-    console.log(result);
     if (result.RtnCode === '1' ){
       selectedOrder.orderStatus = 'refunded';
       selectedOrder.updatedAt = getTaiwanTime();
       await orderRepository.save(selectedOrder);
-      console.log('order update');
       selectedPayment.status = 'refunded';
       selectedPayment.updatedAt = getTaiwanTime();
       await paymentRepository.save(selectedPayment);
-      console.log('payment update');
     }
     else {
       throw ApiError.create(400, '申請退款失敗', ErrorCode.DATA_INVALID);
     }
     const now = getTaiwanTime();
 
-    if (ticketType) {
-      const isInSalePeriod = now >= ticketType.sellBeginDate && now <= ticketType.sellEndDate;
-      if (isInSalePeriod) {
-        // 原子遞增，避免併發退款時 read-modify-write 造成 lost update
-        await ticketTypeRepository.increment(
-          { ticketTypeId: ticketType.ticketTypeId },
-          'remainingQuantity',
-          1
-        );
-        console.log('訂單退款成功，退還1張票券');
-      }
-      
-    }else{
-    console.log('訂單退款成功，不是販售時間不退還票券');
+    const isInSalePeriod = now >= ticketType.sellBeginDate && now <= ticketType.sellEndDate;
+    if (isInSalePeriod) {
+      // 原子遞增，避免併發退款時 read-modify-write 造成 lost update
+      await ticketTypeRepository.increment(
+        { ticketTypeId: ticketType.ticketTypeId },
+        'remainingQuantity',
+        1
+      );
     }
 
     return res.status(200).json({
@@ -278,7 +259,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
 
 export const getOrderInfo = handleErrorAsync(async (req: Request, res: Response<ApiResponse>) => {
   const authenticatedUser = req.user as { userId: string; role: string; email: string; };
-  console.log('authenticatedUser:', authenticatedUser);
   const { orderId } = req.params;
   const orderRepository = AppDataSource.getRepository(Order);
 
@@ -321,7 +301,6 @@ function generateCheckMacValue(data: Record<string, any>): string {
       checkStr += `&${key}=${cleanData[key]}`;
     }
     checkStr += `&HashIV=${HASHIV}`;
-    console.log('checkStr:', checkStr);
     // URL編碼
     let encodedStr = encodeURIComponent(checkStr).toLowerCase();
 
