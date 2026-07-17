@@ -15,7 +15,7 @@
 | 5 | 加 compression middleware | 效能 | 🟡 中 | ✅ 完成（2026-07-17；SSE text/event-stream 已排除壓縮） |
 | 6 | morgan 依環境切格式 | 效能 | 🟡 低 | ✅ 完成（2026-07-17） |
 | 7 | 建單合併兩次寫入 | 效能 | 🟢 低 | ✅ 完成（191e0df，與 3 同批） |
-| 8 | 拆分 concert.ts（45KB） | 維護 | 🟢 低 | 待處理 |
+| 8 | 拆分 concert.ts（45KB） | 維護 | 🟢 低 | ✅ 完成（2026-07-17；拆為 controllers/concert/ 六檔 + barrel，routes 不動） |
 | 9 | console.log 收斂為 logger | 維護 | 🟢 低 | 🔶 部分完成（2026-07-17 已清 controllers/orders.ts、payment.ts，含 PII 與金流參數 log；services/ 仍有約 150 處待收斂） |
 
 ---
