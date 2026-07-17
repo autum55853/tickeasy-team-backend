@@ -250,8 +250,12 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     if (ticketType) {
       const isInSalePeriod = now >= ticketType.sellBeginDate && now <= ticketType.sellEndDate;
       if (isInSalePeriod) {
-        ticketType.remainingQuantity += 1;
-        await ticketTypeRepository.save(ticketType);
+        // 原子遞增，避免併發退款時 read-modify-write 造成 lost update
+        await ticketTypeRepository.increment(
+          { ticketTypeId: ticketType.ticketTypeId },
+          'remainingQuantity',
+          1
+        );
         console.log('訂單退款成功，退還1張票券');
       }
       

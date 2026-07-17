@@ -3,9 +3,12 @@ import type { Server } from 'http';
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { Repository } from 'typeorm';
+import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 import app from '../app.js';
 import { AppDataSource } from '../config/database.js';
 import { Order } from '../models/order.js';
+import { Payment } from '../models/payment.js';
 import { TicketType } from '../models/ticket-type.js';
 import { ConcertSession } from '../models/concert-session.js';
 import { Concert } from '../models/concert.js';
@@ -35,9 +38,10 @@ let testSession: ConcertSession;
 
 let server: Server;
 
-// 測試建立的訂單 / 票種 ID（用於後續清理）
+// 測試建立的訂單 / 票種 / 支付 ID（用於後續清理）
 const createdOrderIds: string[] = [];
 const createdTicketTypeIds: string[] = [];
+const createdPaymentIds: string[] = [];
 
 // orderNumber 格式：yymmdd(6碼) + hhmmss(6碼) + '-' + orderId 末 4 碼大寫 hex
 const ORDER_NUMBER_REGEX = /^\d{12}-[0-9A-F]{4}$/;
@@ -96,6 +100,8 @@ beforeAll(async () => {
   testSession = await sessionRepo.save(sessionRepo.create({
     concertId: testConcert.concertId,
     sessionTitle: '測試場次',
+    // 退款測試需要場次日期在 7 天退款期限之外
+    sessionDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   }));
 });
 
@@ -108,6 +114,9 @@ afterAll(async () => {
   if (!AppDataSource.isInitialized) return;
 
   // 按照 FK 依賴順序刪除
+  if (createdPaymentIds.length > 0) {
+    await AppDataSource.getRepository(Payment).delete(createdPaymentIds);
+  }
   if (createdOrderIds.length > 0) {
     await AppDataSource.getRepository(Order).delete(createdOrderIds);
   }
@@ -227,5 +236,76 @@ describe('POST /api/v1/orders', () => {
       where: { ticketTypeId: ticketType.ticketTypeId },
     });
     expect(orderCount).toBe(0);
+  });
+});
+
+describe('POST /api/v1/orders/:orderId/refund', () => {
+  async function createRefundableOrder(ticketTypeId: string) {
+    const orderRepo = AppDataSource.getRepository(Order);
+    const paymentRepo = AppDataSource.getRepository(Payment);
+
+    const orderId = uuidv4();
+    const order = await orderRepo.save(orderRepo.create({
+      orderId,
+      orderNumber: `250101120000-${orderId.slice(-4).toUpperCase()}`,
+      ticketTypeId,
+      userId: testUser.userId,
+      orderStatus: 'paid',
+      isLocked: false,
+      lockToken: uuidv4(),
+      lockExpireTime: new Date(Date.now() + 60 * 60 * 1000),
+      ...orderPayload(),
+    }));
+    createdOrderIds.push(order.orderId);
+
+    const payment = await paymentRepo.save(paymentRepo.create({
+      orderId: order.orderId,
+      method: 'credit',
+      provider: 'ecpay',
+      status: 'completed',
+      amount: 1000,
+      transactionId: `TEST${Date.now()}${Math.floor(Math.random() * 10000)}`,
+      tradeNo: 'TESTTRADE001',
+    }));
+    createdPaymentIds.push(payment.paymentId);
+
+    return order;
+  }
+
+  it('併發退款時庫存以原子方式遞增，不會發生 lost update', async () => {
+    const ticketType = await createTestTicketType({ totalQuantity: 10, remainingQuantity: 5 });
+    const orderA = await createRefundableOrder(ticketType.ticketTypeId);
+    const orderB = await createRefundableOrder(ticketType.ticketTypeId);
+
+    // Mock 綠界退款 API：延遲後回覆成功，拉開兩個請求「讀庫存」與「寫庫存」的時間差，
+    // 使 read-modify-write 的 lost update 必然重現
+    const axiosPostSpy = jest.spyOn(axios, 'post').mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return { status: 200, data: 'RtnCode=1&RtnMsg=Succeeded' };
+    });
+
+    try {
+      const [resA, resB] = await Promise.all([
+        request(app)
+          .post(`/api/v1/orders/${orderA.orderId}/refund`)
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({ orderId: orderA.orderId }),
+        request(app)
+          .post(`/api/v1/orders/${orderB.orderId}/refund`)
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({ orderId: orderB.orderId }),
+      ]);
+
+      expect(resA.status).toBe(200);
+      expect(resB.status).toBe(200);
+    } finally {
+      axiosPostSpy.mockRestore();
+    }
+
+    // 關鍵驗收：兩筆退款各歸還 1 張，庫存必須是 5 + 2 = 7（lost update 時會是 6）
+    const refreshedTicketType = await AppDataSource.getRepository(TicketType).findOne({
+      where: { ticketTypeId: ticketType.ticketTypeId },
+    });
+    expect(refreshedTicketType!.remainingQuantity).toBe(7);
   });
 });
