@@ -99,7 +99,16 @@ jobs:
       - run: npm ci
       - name: Run migrations
         run: npm run migrate
-      - run: npm test
+      - name: Run tests
+        # tee 保全完整輸出，失敗時上傳 artifact 供追查 flaky 測試明細
+        run: npm test -- --verbose 2>&1 | tee jest-output.log; exit ${PIPESTATUS[0]}
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-output
+          path: jest-output.log
+          retention-days: 14
 
   deploy:
     name: Deploy to Render
