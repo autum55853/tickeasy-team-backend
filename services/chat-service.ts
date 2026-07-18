@@ -80,7 +80,6 @@ export class ChatService {
     }
 
     this.systemPrompt = this.buildSystemPrompt();
-    console.log('✅ 聊天服務初始化成功 (Gemini 2.5 Flash)');
   }
 
   /**
@@ -135,8 +134,6 @@ export class ChatService {
 
     try {
       const { sessionId, userId, category, createSession = false } = options;
-
-      console.log(`🤖 處理用戶提問: "${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}"`);
 
       // 1. 搜尋相關知識庫內容
       const searchResults = await this.searchRelevantContent(userMessage);
@@ -195,7 +192,6 @@ export class ChatService {
         tokens: result.response.usageMetadata?.totalTokenCount || 0
       };
 
-      console.log(`✅ 客服回覆完成 (信心度: ${(confidence * 100).toFixed(1)}%)`);
       return chatResponse;
 
     } catch (error) {
@@ -460,8 +456,6 @@ export class ChatService {
     try {
       const { sessionId, userId, category, createSession = false } = options;
 
-      console.log(`🤖 延續對話: "${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}"`);
-
       const searchResults = await this.searchRelevantContent(userMessage);
       const hasRelevantInfo = searchResults.length > 0;
 
@@ -527,7 +521,6 @@ export class ChatService {
         tokens: result.response.usageMetadata?.totalTokenCount || 0
       };
 
-      console.log(`✅ 延續對話回覆完成 (信心度: ${(confidence * 100).toFixed(1)}%)`);
       return chatResponse;
 
     } catch (error) {

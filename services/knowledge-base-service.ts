@@ -44,8 +44,6 @@ export class KnowledgeBaseService {
    */
   async createKnowledgeBase(data: CreateKnowledgeBaseRequest): Promise<KnowledgeBaseWithSimilarity> {
     try {
-      console.log(`📝 創建新知識庫項目: "${data.title}"`);
-      
       const knowledgeBaseRepo = AppDataSource.getRepository(SupportKnowledgeBase);
       
       // 創建知識庫項目
@@ -61,11 +59,9 @@ export class KnowledgeBaseService {
       
       // 生成嵌入向量
       try {
-        console.log('🧠 為新知識庫項目生成嵌入向量...');
         const embedding = await embeddingService.generateKnowledgeBaseEmbedding(savedKnowledgeBase);
         savedKnowledgeBase.setEmbedding(embedding);
         await knowledgeBaseRepo.save(savedKnowledgeBase);
-        console.log('✅ 嵌入向量生成成功');
       } catch (embeddingError) {
         console.warn('⚠️ 嵌入向量生成失敗，將在後台重試:', embeddingError);
       }
@@ -85,8 +81,6 @@ export class KnowledgeBaseService {
     data: UpdateKnowledgeBaseRequest
   ): Promise<KnowledgeBaseWithSimilarity> {
     try {
-      console.log(`📝 更新知識庫項目: ${id}`);
-      
       const knowledgeBaseRepo = AppDataSource.getRepository(SupportKnowledgeBase);
       const knowledgeBase = await knowledgeBaseRepo.findOne({
         where: { supportKBId: id }
@@ -112,11 +106,9 @@ export class KnowledgeBaseService {
       // 如果內容有變更，重新生成嵌入向量
       if (contentChanged) {
         try {
-          console.log('🧠 內容已變更，重新生成嵌入向量...');
           const embedding = await embeddingService.generateKnowledgeBaseEmbedding(updatedKnowledgeBase);
           updatedKnowledgeBase.setEmbedding(embedding);
           await knowledgeBaseRepo.save(updatedKnowledgeBase);
-          console.log('✅ 嵌入向量更新成功');
         } catch (embeddingError) {
           console.warn('⚠️ 嵌入向量更新失敗:', embeddingError);
         }
@@ -134,8 +126,6 @@ export class KnowledgeBaseService {
    */
   async deleteKnowledgeBase(id: string): Promise<boolean> {
     try {
-      console.log(`🗑️ 刪除知識庫項目: ${id}`);
-      
       const knowledgeBaseRepo = AppDataSource.getRepository(SupportKnowledgeBase);
       const knowledgeBase = await knowledgeBaseRepo.findOne({
         where: { supportKBId: id }
@@ -149,7 +139,6 @@ export class KnowledgeBaseService {
       knowledgeBase.isActive = false;
       await knowledgeBaseRepo.save(knowledgeBase);
       
-      console.log('✅ 知識庫項目已刪除（軟刪除）');
       return true;
     } catch (error: any) {
       console.error('❌ 刪除知識庫項目失敗:', error);
@@ -302,7 +291,6 @@ export class KnowledgeBaseService {
     message: string;
   }> {
     try {
-      console.log('🔄 開始批量更新知識庫嵌入向量...');
       const result = await embeddingService.updateKnowledgeBaseEmbeddings();
       
       return {

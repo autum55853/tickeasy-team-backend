@@ -105,7 +105,7 @@ export async function sendConcertReviewRequest(concert: Concert): Promise<void> 
     payload,
     { headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' } },
   );
-  console.log(`[DiscordService] 演唱會 ${concert.concertId} 審核請求已傳送至 Discord`);
+  console.info(`[DiscordService] 演唱會 ${concert.concertId} 審核請求已傳送至 Discord`);
 }
 
 function buildSupportEmbed(
@@ -189,7 +189,7 @@ export async function sendSupportRequest(
       { headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' } },
     );
     const messageId: string | undefined = response.data?.id;
-    console.log(`[DiscordService] 客服請求已傳送 (session: ${session.supportSessionId}, messageId: ${messageId ?? 'unknown'})`);
+    console.info(`[DiscordService] 客服請求已傳送 (session: ${session.supportSessionId}, messageId: ${messageId ?? 'unknown'})`);
     return messageId ?? null;
   } catch (err) {
     console.error('[DiscordService] 傳送客服請求失敗:', err);

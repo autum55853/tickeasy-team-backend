@@ -56,14 +56,13 @@ export class ConcertReviewService {
     });
 
     if (existingPendingAIReview) {
-      console.log(`演唱會 ${concertId} 已有待處理的 AI 審核記錄 ${existingPendingAIReview.reviewId}，將直接使用該記錄。`);
+      console.info(`演唱會 ${concertId} 已有待處理的 AI 審核記錄 ${existingPendingAIReview.reviewId}，將直接使用該記錄。`);
       // 可選擇返回現有記錄或重新執行，這裡先假設不重複執行
       // 如果 AI 審核失敗或超時，可能需要不同的處理邏輯
       // return existingPendingAIReview; 
       // 或者，如果希望強制重新審核，則可以先將舊的標記為SKIPPED或ERROR等
     }
     
-    console.log(`正在為演唱會 ${concertId} 觸發 AI 審核...`);
     // [OpenAI] const aiResponse = await openAIService.reviewConcert(concert);
     const aiResponse = await geminiService.reviewConcert(concert);
 
@@ -84,7 +83,7 @@ export class ConcertReviewService {
       return pendingReview;
     }
 
-    console.log(`AI 審核完成，演唱會 ${concertId}，結果：`, aiResponse.approved ? '通過' : '未通過/需人工');
+    console.info(`AI 審核完成，演唱會 ${concertId}，結果：`, aiResponse.approved ? '通過' : '未通過/需人工');
 
     const reviewData: DeepPartial<ConcertReview> = {
       concertId,
@@ -96,7 +95,6 @@ export class ConcertReviewService {
 
     const newReview = this.concertReviewRepository.create(reviewData);
     await this.concertReviewRepository.save(newReview);
-    console.log(`AI 審核記錄 ${newReview.reviewId} 已為演唱會 ${concertId} 保存。`);
 
     // 更新 Concert 主表的狀態
     await this.updateConcertStatusAfterReview(concert, newReview, aiResponse);
@@ -137,7 +135,6 @@ export class ConcertReviewService {
 
     const newReview = this.concertReviewRepository.create(reviewData);
     await this.concertReviewRepository.save(newReview);
-    console.log(`手動審核記錄 ${newReview.reviewId} 已為演唱會 ${concertId} 保存。`);
 
     // 更新 Concert 主表的狀態
     await this.updateConcertStatusAfterReview(concert, newReview);
@@ -183,20 +180,19 @@ export class ConcertReviewService {
 
       if (mainReviewStatus === ReviewStatus.APPROVED) {
         concert.conInfoStatus = 'published'; // 審核通過，發布
-        console.log(`演唱會 ${concert.concertId} 已審核通過並發布。`);
+        console.info(`演唱會 ${concert.concertId} 已審核通過並發布。`);
       } else if (mainReviewStatus === ReviewStatus.REJECTED) {
         concert.conInfoStatus = 'rejected'; // 審核拒絕
-        console.log(`演唱會 ${concert.concertId} 已被拒絕。`);
+        console.info(`演唱會 ${concert.concertId} 已被拒絕。`);
       }
       // SKIPPED 狀態下，conInfoStatus 保持 reviewing，reviewStatus 標為 skipped
        else if (mainReviewStatus === ReviewStatus.SKIPPED) {
         concert.conInfoStatus = 'reviewing'; // 保持 reviewing
-        console.log(`演唱會 ${concert.concertId} AI審核跳過，狀態維持 reviewing，需要人工介入。`);
+        console.info(`演唱會 ${concert.concertId} AI審核跳過，狀態維持 reviewing，需要人工介入。`);
       }
     }
     
     await this.concertRepository.save(concert);
-    console.log(`演唱會 ${concert.concertId} 主表狀態已更新。reviewStatus: ${concert.reviewStatus}, conInfoStatus: ${concert.conInfoStatus}`);
   }
 
   /**

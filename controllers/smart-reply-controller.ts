@@ -31,16 +31,12 @@ export class SmartReplyController {
         });
       }
 
-      console.log(`🤖 智能回覆請求: "${message.slice(0, 50)}${message.length > 50 ? '...' : ''}"`);
-
       // 優先使用關鍵字匹配
       const smartReply = await smartReplyService.getSmartReply(message);
 
       // 如果沒有找到匹配且啟用了 AI 後備
       if (smartReply.type === 'neutral' && enableAI) {
         try {
-          console.log('🧠 使用 AI 後備回覆 (OpenAI Responses API)');
-          
           // 使用 OpenAI Responses API，但不建立業務會話
           const aiReply = await chatService.chat(message, {
             createSession: false // 純技術層面的 AI 對話
@@ -90,7 +86,6 @@ export class SmartReplyController {
     try {
       const { userId, category, initialMessage } = req.body;
 
-      console.log(`🚀 開始新會話 - 用戶: ${userId || '匿名'}, 分類: ${category || '一般諮詢'}`);
 
       const supportSessionRepo = AppDataSource.getRepository(SupportSession);
 
@@ -109,7 +104,6 @@ export class SmartReplyController {
 
       if (existingSession) {
         session = existingSession;
-        console.log(`📋 使用現有會話: ${session.supportSessionId}`);
       } else {
         // 建立新的業務會話
         session = new SupportSession();
@@ -120,14 +114,12 @@ export class SmartReplyController {
         session.category = category || '一般諮詢';
         
         session = await supportSessionRepo.save(session);
-        console.log(`✨ 建立新會話: ${session.supportSessionId}`);
       }
 
       let botMessage = null;
 
       // === 處理初始訊息 ===
       if (initialMessage) {
-        console.log(`💬 處理初始訊息: "${initialMessage}"`);
 
         // 儲存用戶訊息到業務系統
         const supportMessageRepo = AppDataSource.getRepository(SupportMessage);
@@ -151,8 +143,6 @@ export class SmartReplyController {
         // 2. 如果關鍵字匹配失敗，使用 OpenAI Responses API
         if (smartReply.type === 'neutral') {
           try {
-            console.log('🧠 關鍵字匹配失敗，使用 OpenAI Responses API');
-            
             const aiReply = await chatService.chat(initialMessage, {
               sessionId: session.supportSessionId,
               userId: userId,
@@ -214,7 +204,7 @@ export class SmartReplyController {
         // 業務邏輯：檢查是否需要轉接
         if (smartReply.type === 'neutral' || confidence < 0.6) {
           session.status = SessionStatus.WAITING;
-          console.log('🔄 信心度不足，標記為等待人工客服');
+          console.info('🔄 信心度不足，標記為等待人工客服');
         }
 
         // 設定首次回應時間
@@ -276,7 +266,6 @@ export class SmartReplyController {
         });
       }
 
-      console.log(`💬 會話訊息 - Session: ${sessionId}, 用戶: ${userId || '匿名'}`);
 
       const supportSessionRepo = AppDataSource.getRepository(SupportSession);
       const supportMessageRepo = AppDataSource.getRepository(SupportMessage);
@@ -353,8 +342,6 @@ export class SmartReplyController {
       // 2. 關鍵字匹配失敗（neutral）→ 延續 Gemini 對話（history 由 chat-service 從 DB 重建）
       if (smartReply.type === 'neutral') {
         try {
-          console.log('🧠 關鍵字匹配失敗，延續 Gemini 對話');
-
           const aiReply = await chatService.continueChat(message, {
             sessionId: session.supportSessionId,
             userId: userId,
@@ -428,7 +415,7 @@ export class SmartReplyController {
       if (confidence < 0.6) {
         session.status = SessionStatus.WAITING;
         await supportSessionRepo.save(session);
-        console.log('🔄 信心度不足，標記為等待人工客服');
+        console.info('🔄 信心度不足，標記為等待人工客服');
       }
 
       res.json({
@@ -533,7 +520,7 @@ export class SmartReplyController {
       const { reason } = req.body;
       const userId = (req.user as any)?.userId;
 
-      console.log(`🔄 申請人工轉接 - Session: ${sessionId}, 原因: ${reason || '用戶主動要求'}`);
+      console.info(`🔄 申請人工轉接 - Session: ${sessionId}, 原因: ${reason || '用戶主動要求'}`);
 
       const supportSessionRepo = AppDataSource.getRepository(SupportSession);
 
@@ -628,7 +615,6 @@ export class SmartReplyController {
       const { satisfactionRating, satisfactionComment } = req.body;
       const userId = (req.user as any)?.userId;
 
-      console.log(`🔚 關閉會話 - Session: ${sessionId}, 滿意度: ${satisfactionRating || '未評分'}`);
 
       const supportSessionRepo = AppDataSource.getRepository(SupportSession);
 

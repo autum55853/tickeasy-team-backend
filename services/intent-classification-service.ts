@@ -49,12 +49,9 @@ export class IntentClassificationService {
    * 分析用戶查詢意圖
    */
   async analyzeIntent(userQuery: string): Promise<IntentAnalysisResult> {
-    console.log(`🎯 開始意圖分析: "${userQuery}"`);
-    
     try {
       // 如果AI分析被關閉，回退到傳統邏輯
       if (!IntentClassificationService.AI_INTENT_ENABLED) {
-        console.log('📝 AI分析已關閉，使用傳統關鍵字匹配');
         return this.fallbackKeywordMatching(userQuery);
       }
 
@@ -64,7 +61,6 @@ export class IntentClassificationService {
       // 驗證結果可靠性
       const validatedResult = this.validateIntentResult(aiResult, userQuery);
       
-      console.log(`✅ 意圖分析完成: ${validatedResult.primaryIntent} (信心度: ${validatedResult.confidence})`);
       return validatedResult;
       
     } catch (error) {
@@ -145,11 +141,6 @@ export class IntentClassificationService {
   private validateIntentResult(result: IntentAnalysisResult, userQuery: string): IntentAnalysisResult {
     const threshold = IntentClassificationService.CONFIDENCE_THRESHOLDS[result.primaryIntent];
     const shouldProceed = result.confidence >= threshold;
-    
-    // 如果信心度不足，記錄並考慮回退
-    if (!shouldProceed) {
-      console.log(`⚠️ 信心度不足 ${result.confidence} < ${threshold}，可能需要回退`);
-    }
 
     // 檢查是否有明顯的關鍵詞衝突
     const conflictDetected = this.detectKeywordConflicts(userQuery, result);
@@ -180,7 +171,6 @@ export class IntentClassificationService {
       );
       
       if (hasConflict) {
-        console.log('⚠️ 檢測到關鍵詞衝突: 演唱會意圖但包含非演出關鍵詞');
         return true;
       }
     }
@@ -255,9 +245,6 @@ export class IntentClassificationService {
     );
     
     if (instructionMatches.length > 0) {
-      console.log(`🎯 檢測到客服指導詞彙: [${instructionMatches.join(', ')}]`);
-      console.log('🎯 優先歸類為一般客服，即使包含領域關鍵詞');
-      
       return {
         primaryIntent: IntentType.GENERAL_SERVICE,
         confidence: 0.85,

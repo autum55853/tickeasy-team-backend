@@ -37,8 +37,6 @@ export class SemanticSearchService {
     options: SearchOptions = {}
   ): Promise<SearchResult[]> {
     try {
-      console.log(`🔍 開始語義搜尋知識庫: "${query}"`);
-      
       // 生成查詢向量
       const queryEmbedding = await embeddingService.generateEmbedding(query);
       
@@ -56,8 +54,6 @@ export class SemanticSearchService {
       const knowledgeBases = await knowledgeBaseRepo.find({
         where: whereConditions
       });
-
-      console.log(`📚 找到 ${knowledgeBases.length} 個知識庫項目進行比較`);
 
       // 計算相似度並排序
       const results: SearchResult[] = [];
@@ -91,8 +87,6 @@ export class SemanticSearchService {
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, options.limit || this.DEFAULT_LIMIT);
 
-      console.log(`✅ 語義搜尋完成，找到 ${sortedResults.length} 個相關結果`);
-      
       return sortedResults;
     } catch (error) {
       console.error('❌ 語義搜尋失敗:', error);
@@ -108,8 +102,6 @@ export class SemanticSearchService {
     options: SearchOptions = {}
   ): Promise<SearchResult[]> {
     try {
-      console.log(`🔀 開始混合搜尋: "${query}"`);
-
       // 檢查嵌入服務是否可用（先檢查 API Key）
       const hasApiKey = embeddingService.hasApiKey();
       
@@ -130,7 +122,7 @@ export class SemanticSearchService {
         }
       } else {
         // 沒有 API Key，只執行關鍵字搜尋
-        console.log('⚠️  沒有 OpenAI API Key，使用關鍵字搜尋');
+        console.warn('⚠️  沒有 OpenAI API Key，使用關鍵字搜尋');
         keywordResults = await this.keywordSearch(query, { ...options, limit: options.limit || 10 });
       }
 
@@ -142,14 +134,12 @@ export class SemanticSearchService {
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, options.limit || this.DEFAULT_LIMIT);
 
-      console.log(`✅ 混合搜尋完成，最終結果 ${finalResults.length} 個`);
-      
       return finalResults;
     } catch (error) {
       console.error('❌ 混合搜尋失敗:', error);
       // 降級到只使用關鍵字搜尋
       try {
-        console.log('🔄 降級到關鍵字搜尋...');
+        console.warn('🔄 降級到關鍵字搜尋...');
         return await this.keywordSearch(query, options);
       } catch (fallbackError) {
         console.error('❌ 關鍵字搜尋也失敗:', fallbackError);
@@ -276,10 +266,7 @@ export class SemanticSearchService {
     limit: number = 5
   ): Promise<SearchResult[]> {
     try {
-      console.log(`🔗 尋找相似內容: ${contentType}/${contentId}`);
-
       let sourceEmbedding: number[];
-      let sourceTitle: string;
 
       if (contentType === 'knowledge_base') {
         const knowledgeBaseRepo = AppDataSource.getRepository(SupportKnowledgeBase);
@@ -292,7 +279,6 @@ export class SemanticSearchService {
         }
 
         sourceEmbedding = kb.embeddingVector;
-        sourceTitle = kb.title;
       } else {
         // FAQ 相似內容功能暫時不實作，因為 FAQ 沒有嵌入向量
         return [];
@@ -336,8 +322,6 @@ export class SemanticSearchService {
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit);
 
-      console.log(`✅ 找到 ${sortedResults.length} 個與 "${sourceTitle}" 相似的內容`);
-      
       return sortedResults;
     } catch (error) {
       console.error('❌ 尋找相似內容失敗:', error);

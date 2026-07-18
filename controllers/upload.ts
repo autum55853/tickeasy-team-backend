@@ -22,7 +22,7 @@ function getStoragePathFromUrl(url: string): string | null {
     if (urlParts.length === 2) {
       return urlParts[1];
     }
-  } catch (e) { console.log(e); /* 忽略解析錯誤 */ }
+  } catch (e) { console.error('解析圖片 URL 路徑失敗:', e); }
   return null;
 }
 
@@ -39,7 +39,6 @@ async function deleteOldImage(oldUrls: string | string[] | null | undefined): Pr
     if (oldStoragePath) {
       try {
         await storageService.deleteImage(oldStoragePath);
-        console.log(`舊圖片已刪除: ${oldStoragePath}`);
       } catch (deleteError) {
         console.error(`刪除舊圖片失敗 (${oldStoragePath}):`, deleteError);
       }

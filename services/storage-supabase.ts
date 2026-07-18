@@ -231,8 +231,6 @@ async function cleanupTempImages(hours: number = 24): Promise<number> {
     const tempDirs = ['temp/concert_banner', 'temp/concert_seating_table'];
     
     for (const tempDir of tempDirs) {
-      console.log(`檢查 ${bucket}/${tempDir} 目錄...`);
-      
       // 獲取暫存目錄下的檔案
       const { data: files, error: listError } = await supabase.storage
         .from(bucket)
@@ -246,7 +244,6 @@ async function cleanupTempImages(hours: number = 24): Promise<number> {
       }
 
       if (!files || files.length === 0) {
-        console.log(`${bucket}/${tempDir} 中沒有暫存檔案`);
         continue;
       }
 
@@ -262,7 +259,6 @@ async function cleanupTempImages(hours: number = 24): Promise<number> {
       });
 
       if (filesToDelete.length === 0) {
-        console.log(`${bucket}/${tempDir} 中沒有過期的暫存檔案`);
         continue;
       }
 
@@ -277,7 +273,7 @@ async function cleanupTempImages(hours: number = 24): Promise<number> {
         continue;
       }
 
-      console.log(`已從 ${bucket}/${tempDir} 中刪除 ${filePaths.length} 個暫存檔案`);
+      console.info(`已從 ${bucket}/${tempDir} 中刪除 ${filePaths.length} 個暫存檔案`);
       totalDeleted += filePaths.length;
     }
 

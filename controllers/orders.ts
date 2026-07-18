@@ -41,7 +41,6 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
   }
 
   const ticketTypeRepository = AppDataSource.getRepository(TicketTypeEntity);
-  const orderRepository = AppDataSource.getRepository(Order);
 
   const selectedTicket = await ticketTypeRepository.findOne({
     where: { ticketTypeId },
@@ -57,42 +56,51 @@ export const createOrder = handleErrorAsync(async (req: Request, res: Response<A
     throw ApiError.outOfTimeRange(selectedTicket.ticketTypeName);
   }
 
-  // 扣庫存
-  const updateResult = await ticketTypeRepository
-    .createQueryBuilder()
-    .update(TicketTypeEntity)
-    .set({ remainingQuantity: () => 'remainingQuantity - 1' })
-    .where('ticketTypeId = :id', { id: ticketTypeId })
-    .andWhere('remainingQuantity > 0')
-    .execute();
-
-  if (!updateResult.affected || updateResult.affected === 0) {
-    throw ApiError.dataConstraintViolation('票券已售罄');
-  }
-
   // 設定 lock 時間（15 分鐘後過期）
   const lockExpireTime = new Date(now.getTime() + 15 * 60 * 1000);
 
-  // 創建新訂單（createdAt/updatedAt 由 @BeforeInsert 自動設定台灣時間）
-  const newOrder = orderRepository.create({
-    ticketTypeId,
-    userId: authenticatedUser.userId,
-    orderStatus: 'held' as OrderStatus,
-    isLocked: true,
-    lockToken: uuidv4(),
-    lockExpireTime,
-    purchaserName,
-    purchaserEmail,
-    purchaserPhone,
+  // 扣庫存 → 建訂單 包在同一個 transaction：任一步失敗全部 rollback，
+  // 避免「庫存已扣、訂單未建立」的資料不一致
+  const savedOrder = await AppDataSource.transaction(async (manager) => {
+    const txTicketTypeRepository = manager.getRepository(TicketTypeEntity);
+    const txOrderRepository = manager.getRepository(Order);
+
+    // 扣庫存（原子條件式 UPDATE，維持 remainingQuantity > 0 檢查，避免超賣）
+    const updateResult = await txTicketTypeRepository
+      .createQueryBuilder()
+      .update(TicketTypeEntity)
+      .set({ remainingQuantity: () => 'remainingQuantity - 1' })
+      .where('ticketTypeId = :id', { id: ticketTypeId })
+      .andWhere('remainingQuantity > 0')
+      .execute();
+
+    if (!updateResult.affected || updateResult.affected === 0) {
+      throw ApiError.dataConstraintViolation('票券已售罄');
+    }
+
+    // orderId 預先產生 + orderNumber 於 create 時一併生成，
+    // 合併原本「save 後再 update orderNumber」的兩次寫入
+    const orderId = uuidv4();
+    const orderNumber = generateOrderNumber(now, orderId);
+
+    // 創建新訂單（createdAt/updatedAt 由 @BeforeInsert 自動設定台灣時間）
+    const newOrder = txOrderRepository.create({
+      orderId,
+      ticketTypeId,
+      userId: authenticatedUser.userId,
+      orderStatus: 'held' as OrderStatus,
+      isLocked: true,
+      lockToken: uuidv4(),
+      lockExpireTime,
+      purchaserName,
+      purchaserEmail,
+      purchaserPhone,
+      orderNumber,
+    });
+
+    return txOrderRepository.save(newOrder);
   });
 
-  const savedOrder = await orderRepository.save(newOrder);
-
-  // 生成 orderNumber，並立即更新
-  const orderNumber = generateOrderNumber(savedOrder.createdAt, savedOrder.orderId);
-  await orderRepository.update(savedOrder.orderId, { orderNumber });
-
-  // console.log(`✅ 訂單 ${savedOrder.orderId} 創建成功`);
 
   return res.status(200).json({
     status: 'success',
@@ -114,8 +122,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   // const authenticatedUser = req.user as Express.User; // 從 middleware 拿到 userId
   const authenticatedUser = req.user as { userId: string; role: string; email: string; };
 
-  // console.log('order:', orderId);
-  // console.log('authenticatedUser:', authenticatedUser);
 
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -138,7 +144,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     throw ApiError.forbidden();
   }
 
-  // console.log('order:', selectedOrder);
   const ticketTypeRepository = AppDataSource.getRepository(TicketTypeEntity);
   const ticketType = await ticketTypeRepository.findOneBy({ ticketTypeId: selectedOrder.ticketTypeId });
   if (!ticketType) {
@@ -155,8 +160,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   refundDeadline.setDate(refundDeadline.getDate() - 7);
   const now = getTaiwanTime();
   const afterRefundDeadline = now > refundDeadline;
-  console.log('now:',now);
-  console.log('refundDeadline:',refundDeadline);
 
   if (afterRefundDeadline) {
     throw ApiError.create(403, '此訂單不可退款', ErrorCode.AUTH_FORBIDDEN);
@@ -168,7 +171,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     relations: [ 'order' ]
   });
 
-  // console.log(selectedPayment);
   if (!selectedPayment) {
     throw ApiError.notFound('支付記錄');
   }
@@ -178,7 +180,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   }
 
   let TradeNo = selectedPayment.tradeNo;
-  // console.log(TradeNo);
   
   if (TradeNo === ''){
     throw ApiError.notFound('綠界交易編號');
@@ -195,7 +196,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
   };
 
   data.CheckMacValue = generateCheckMacValue(data);
-  // console.log(data);
   const apiUrl = 'https://payment-stage.ecpay.com.tw/CreditDetail/DoAction';
   
   try {
@@ -212,7 +212,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
     if (response.status !== 200) {
       throw new Error(`HTTP Error: ${response.status}`);
     }
-    console.log(response.data);
     const result: Record<string, string> = {};
     const pairs = response.data.split('&');
     
@@ -222,32 +221,27 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
         result[decodeURIComponent(key)] = decodeURIComponent(value);
       }
     }
-    console.log(result);
     if (result.RtnCode === '1' ){
       selectedOrder.orderStatus = 'refunded';
       selectedOrder.updatedAt = getTaiwanTime();
       await orderRepository.save(selectedOrder);
-      console.log('order update');
       selectedPayment.status = 'refunded';
       selectedPayment.updatedAt = getTaiwanTime();
       await paymentRepository.save(selectedPayment);
-      console.log('payment update');
     }
     else {
       throw ApiError.create(400, '申請退款失敗', ErrorCode.DATA_INVALID);
     }
     const now = getTaiwanTime();
 
-    if (ticketType) {
-      const isInSalePeriod = now >= ticketType.sellBeginDate && now <= ticketType.sellEndDate;
-      if (isInSalePeriod) {
-        ticketType.remainingQuantity += 1;
-        await ticketTypeRepository.save(ticketType);
-        console.log('訂單退款成功，退還1張票券');
-      }
-      
-    }else{
-    console.log('訂單退款成功，不是販售時間不退還票券');
+    const isInSalePeriod = now >= ticketType.sellBeginDate && now <= ticketType.sellEndDate;
+    if (isInSalePeriod) {
+      // 原子遞增，避免併發退款時 read-modify-write 造成 lost update
+      await ticketTypeRepository.increment(
+        { ticketTypeId: ticketType.ticketTypeId },
+        'remainingQuantity',
+        1
+      );
     }
 
     return res.status(200).json({
@@ -265,7 +259,6 @@ export const refundOrder = handleErrorAsync(async (req: Request, res: Response<A
 
 export const getOrderInfo = handleErrorAsync(async (req: Request, res: Response<ApiResponse>) => {
   const authenticatedUser = req.user as { userId: string; role: string; email: string; };
-  console.log('authenticatedUser:', authenticatedUser);
   const { orderId } = req.params;
   const orderRepository = AppDataSource.getRepository(Order);
 
@@ -308,7 +301,6 @@ function generateCheckMacValue(data: Record<string, any>): string {
       checkStr += `&${key}=${cleanData[key]}`;
     }
     checkStr += `&HashIV=${HASHIV}`;
-    console.log('checkStr:', checkStr);
     // URL編碼
     let encodedStr = encodeURIComponent(checkStr).toLowerCase();
 

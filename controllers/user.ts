@@ -369,7 +369,6 @@ export const getOrdersList = handleErrorAsync(async (req: Request, res: Response
   ])
   .where('ticket.userId = :userId', { userId: authenticatedUser.userId })
   .getRawMany();
-  console.log(orders);
   let data = [];
 
   const flatOrders = orders.map(raw => ({
@@ -452,7 +451,6 @@ export const getTicketdetail = handleErrorAsync(async (req: Request, res: Respon
   if (!rawTicket) {
     throw ApiError.notFound('票券');
   }
-  // console.log(rawTicket);
   const data = {
     concertName: rawTicket.contitle,
     concertAddress: rawTicket.conaddress,
@@ -478,7 +476,6 @@ export const getTicketdetail = handleErrorAsync(async (req: Request, res: Respon
       website: rawTicket.orgwebsite,
     }
   };
-  // console.log(data);
   return res.status(200).json({
     status: 'success',
     message: '成功取得票券詳細資料',

@@ -132,8 +132,6 @@ export async function moveImage(fromPath: string, toPath: string, bucket: string
       .from(bucket)
       .getPublicUrl(toPath);
     
-    console.log(`圖片移動成功: ${fromPath} → ${toPath}`);
-    
     return publicUrlData.publicUrl;
     
   } catch (error) {

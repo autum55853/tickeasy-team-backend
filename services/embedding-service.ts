@@ -149,8 +149,6 @@ export class EmbeddingService {
    * 注意：切換 AI 供應商後（維度從 1536 → 768），需執行此方法重生所有向量。
    */
   async updateKnowledgeBaseEmbeddings(): Promise<{ updated: number; failed: number }> {
-    console.log('🔄 開始批量更新知識庫嵌入向量...');
-
     const knowledgeBaseRepo = AppDataSource.getRepository(SupportKnowledgeBase);
     const knowledgeBases = await knowledgeBaseRepo.find({
       where: { isActive: true }
@@ -165,7 +163,6 @@ export class EmbeddingService {
         kb.setEmbedding(embedding);
         await knowledgeBaseRepo.save(kb);
         updated++;
-        console.log(`✅ 知識庫 "${kb.title}" 嵌入向量已更新`);
       } catch (error) {
         console.error(`❌ 知識庫 "${kb.title}" 嵌入向量更新失敗:`, error);
         failed++;
@@ -174,7 +171,7 @@ export class EmbeddingService {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    console.log(`🎉 知識庫嵌入向量更新完成: ${updated} 成功, ${failed} 失敗`);
+    console.info(`🎉 知識庫嵌入向量更新完成: ${updated} 成功, ${failed} 失敗`);
     return { updated, failed };
   }
 

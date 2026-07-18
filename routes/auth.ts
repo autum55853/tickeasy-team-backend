@@ -11,16 +11,21 @@ import {
 } from '../controllers/auth.js';
 import passport from '../config/passport.js';
 import { isAuthenticated } from '../middlewares/auth.js';
+import { authRateLimiter, verificationCodeRateLimiter } from '../middlewares/rateLimit.js';
 import { changePassword } from '../controllers/auth.js';
 
 const router: Router = express.Router();
 
+// 全 auth 端點限流（同 IP 15 分鐘 20 次），防暴力嘗試
+router.use(authRateLimiter);
+
 router.post('/register', register);
 router.post('/login', login);
-router.post('/verify-email', verifyEmail);
-router.post('/resend-verification', resendVerification);
-router.post('/request-password-reset', requestPasswordReset);
-router.post('/reset-password', resetPassword);
+// 驗證碼類端點加掛更嚴限流（同 IP 15 分鐘 10 次）
+router.post('/verify-email', verificationCodeRateLimiter, verifyEmail);
+router.post('/resend-verification', verificationCodeRateLimiter, resendVerification);
+router.post('/request-password-reset', verificationCodeRateLimiter, requestPasswordReset);
+router.post('/reset-password', verificationCodeRateLimiter, resetPassword);
 // google login
 // router.get('/google', googleLogin); // Passport 會處理重定向 (舊的)
 // router.get('/google/callback', googleLogin); // 處理 Google 回調 (舊的)

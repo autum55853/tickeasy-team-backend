@@ -202,19 +202,7 @@ export class TicketVerificationService {
     // 計算最早可驗票時間（UTC 毫秒數）
     const earliestVerifyUTC = concertStartUTC - maxAdvanceHours * 60 * 60 * 1000 - 8 * 60 * 60 * 1000;
 
-    // Debug 資訊 - 全部轉換為台灣時間顯示
-    const nowTaiwan = new Date(nowUTC).toLocaleString('zh-TW', { 
-      timeZone: taiwanTimeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-    
-    const concertStartTaiwan = new Date(concertStartUTC).toLocaleString('zh-TW', { 
+    const earliestVerifyTaiwan = new Date(earliestVerifyUTC).toLocaleString('zh-TW', {
       timeZone: taiwanTimeZone,
       year: 'numeric',
       month: '2-digit',
@@ -222,23 +210,6 @@ export class TicketVerificationService {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
-    });
-    
-    const earliestVerifyTaiwan = new Date(earliestVerifyUTC).toLocaleString('zh-TW', { 
-      timeZone: taiwanTimeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-
-    console.log('🕐 時間驗證 Debug:', {
-      '當前台灣時間': nowTaiwan,
-      '演出開始時間(台灣)': concertStartTaiwan,
-      '最早驗票時間(台灣)': earliestVerifyTaiwan,
-      '可以驗票': nowUTC >= earliestVerifyUTC
     });
 
     if (nowUTC < earliestVerifyUTC) {
@@ -271,8 +242,8 @@ export class TicketVerificationService {
       const verifierType = ['admin', 'superuser'].includes(verifierRole) ? '管理員' : '主辦方';
       const verificationTime = new Date();
 
-      // 記錄核銷資訊到 console
-      console.log(
+      // 記錄核銷資訊到 console（驗票稽核軌跡）
+      console.info(
         `票券核銷成功 - 票券ID: ${ticket.ticketId}, 驗票人員: ${verifierEmail} (${verifierType}), 時間: ${verificationTime.toISOString()}`
       );
 

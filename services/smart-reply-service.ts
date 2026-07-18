@@ -73,7 +73,6 @@ export class SmartReplyService {
   private knowledgeBaseRepo = AppDataSource.getRepository(SupportKnowledgeBase);
 
   constructor() {
-    console.log('✅ 智能回覆服務初始化成功 (資料庫版本)');
   }
 
   /**
@@ -99,19 +98,15 @@ export class SmartReplyService {
     const startTime = Date.now();
     
     try {
-      console.log(`🤖 智能回覆處理: "${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}"`);
-
       // 🥇 最優先：常見問答 (FAQ) — 任何提問先查 FAQ，命中即回並附導向連結
       const topFaqMatch = await this.matchFAQ(userMessage);
       if (topFaqMatch) {
         await this.incrementViewCount(topFaqMatch.ruleId);
-        console.log(`🥇 FAQ 最優先命中: ${topFaqMatch.ruleId}`);
         return this.buildFaqReply(topFaqMatch, startTime);
       }
 
       // 🎯 第一階段：統一意圖分析
       const intentResult = await intentClassificationService.analyzeIntent(userMessage);
-      console.log(`🎯 意圖分析結果: ${intentResult.primaryIntent} (信心度: ${intentResult.confidence})`);
 
       // 🚨 處理意圖衝突
       if (intentResult.conflictDetected && !intentResult.shouldProceed) {
@@ -137,7 +132,6 @@ export class SmartReplyService {
       }
 
       // 🔄 第三階段：回退到傳統層級式處理
-      console.log('⚡ 意圖信心度不足，回退到傳統處理流程');
       return await this.processTraditionalReply(userMessage, startTime, intentResult);
 
     } catch (error) {
@@ -157,7 +151,6 @@ export class SmartReplyService {
     
     switch (intentResult.primaryIntent) {
       case IntentType.CONCERT: {
-        console.log('🎵 處理演唱會查詢意圖');
         const concertResult = await this.tryConcertSearch(userMessage);
         if (concertResult) {
           concertResult.metadata.intentAnalysis = intentResult;
@@ -167,24 +160,19 @@ export class SmartReplyService {
       }
 
       case IntentType.FOOD:
-        console.log('🍽️ 處理美食查詢意圖');
         return this.handleFoodQuery(userMessage, intentResult, startTime);
 
       case IntentType.HOTEL:
-        console.log('🏨 處理住宿查詢意圖');
         return this.handleHotelQuery(userMessage, intentResult, startTime);
 
       case IntentType.TRANSPORT:
-        console.log('🚗 處理交通查詢意圖');
         return this.handleTransportQuery(userMessage, intentResult, startTime);
 
       case IntentType.GENERAL_SERVICE:
-        console.log('🎧 處理一般客服意圖');
         // 繼續使用傳統流程處理一般客服問題
         break;
 
       default:
-        console.log('❓ 未知意圖，回退到傳統流程');
         break;
     }
 
@@ -280,25 +268,16 @@ export class SmartReplyService {
       });
 
       if (tutorialRules.length === 0) {
-        console.log('⚠️ 沒有找到圖文教學規則');
         return null;
       }
 
-      console.log(`🔍 找到 ${tutorialRules.length} 個圖文教學規則`);
-      console.log(`🔍 用戶輸入: "${userMessage}"`);
       
-      // 調試：檢查第一個規則
-      if (tutorialRules[0]) {
-        const firstRule = tutorialRules[0];
-        console.log(`🔍 第一個規則 - ID: ${firstRule.ruleId}, 關鍵字: [${firstRule.keywords.join(', ')}]`);
-      }
 
       let bestMatch: any = null;
       let bestScore = 0;
 
       for (const rule of tutorialRules) {
         const score = rule.calculateKeywordScore(userMessage);
-        console.log(`🔍 規則 ${rule.ruleId} 分數: ${score.toFixed(4)}`);
         
         if (score > bestScore) {
           bestScore = score;
@@ -317,8 +296,6 @@ export class SmartReplyService {
         }
       }
 
-      console.log(`🔍 最佳分數: ${bestScore.toFixed(4)}, 閾值: 0.2`);
-      console.log(`🔍 是否達到閾值: ${bestScore >= 0.2 ? '✅ 是' : '❌ 否'}`);
       
       return bestScore >= 0.2 ? bestMatch : null; // 降低閾值，提高匹配率
 
@@ -343,7 +320,6 @@ export class SmartReplyService {
       });
 
       if (faqRules.length === 0) {
-        console.log('⚠️ 沒有找到 FAQ 規則');
         return null;
       }
 
@@ -536,8 +512,6 @@ export class SmartReplyService {
         return null;
       }
 
-      console.log('🎵 檢測到演唱會相關查詢，開始搜索...');
-
       const searchResults = await concertSearchService.searchConcerts({
         query: userMessage,
         limit: 5,
@@ -605,12 +579,9 @@ export class SmartReplyService {
    */
   private isConcertRelatedQuery(userMessage: string): boolean {
     const lowerMessage = userMessage.toLowerCase();
-    console.log(`🎵 檢測演唱會意圖: "${userMessage}"`);
-
     // 客服票務詞（退票/退款等）屬一般客服，優先排除，避免被 '票' 類關鍵字誤判為演唱會查詢
     const customerServiceExclusions = ['退票', '退款', '退費', '退錢', '取消訂單', '改期', '轉讓'];
     if (customerServiceExclusions.some(keyword => lowerMessage.includes(keyword))) {
-      console.log('  ❌ 命中客服票務排除詞，非演唱會查詢');
       return false;
     }
 
@@ -658,18 +629,12 @@ export class SmartReplyService {
     const hasLocationKeyword = matchedLocationKeywords.length > 0;
     const hasMusicKeyword = matchedMusicKeywords.length > 0;
 
-    console.log(`  - 演唱會關鍵字: ${hasConcertKeyword ? matchedConcertKeywords.join(', ') : '無'}`);
-    console.log(`  - 地區關鍵字: ${hasLocationKeyword ? matchedLocationKeywords.join(', ') : '無'}`);
-    console.log(`  - 音樂類型關鍵字: ${hasMusicKeyword ? matchedMusicKeywords.join(', ') : '無'}`);
-
     // 組合判斷邏輯
     if (hasConcertKeyword) {
-      console.log(`  ✅ 匹配原因: 包含演唱會關鍵字 (${matchedConcertKeywords.join(', ')})`);
       return true; // 直接包含演唱會關鍵字
     }
 
     if (hasLocationKeyword && hasMusicKeyword) {
-      console.log(`  ✅ 匹配原因: 地區 + 音樂類型 (${matchedLocationKeywords.join(', ')} + ${matchedMusicKeywords.join(', ')})`);
       return true; // 地區 + 音樂類型 (如：台北流行音樂演出)
     }
 
@@ -679,7 +644,6 @@ export class SmartReplyService {
     const hasArtistIndicator = matchedArtistIndicators.length > 0;
     
     if (hasArtistIndicator) {
-      console.log(`  ✅ 匹配原因: 藝人指示詞 (${matchedArtistIndicators.join(', ')})`);
       return true;
     }
 
@@ -694,11 +658,9 @@ export class SmartReplyService {
     const hasQuestionPattern = matchedQuestionPatterns.length > 0;
 
     if (hasQuestionPattern) {
-      console.log(`  ✅ 匹配原因: 問句模式 (${matchedQuestionPatterns.join(', ')})`);
       return true;
     }
 
-    console.log('  ❌ 未匹配演唱會意圖');
     return false;
   }
 
@@ -840,7 +802,6 @@ export class SmartReplyService {
         { ruleId },
         { [updateField]: () => `"${updateField}" + 1` }
       );
-      console.log(`✅ 記錄反饋成功: ${ruleId} - ${isHelpful ? '有用' : '無用'}`);
     } catch (error) {
       console.error('❌ 記錄反饋失敗:', error);
     }
@@ -922,7 +883,6 @@ export class SmartReplyService {
       });
 
       await this.knowledgeBaseRepo.save(rule);
-      console.log(`✅ 新增規則成功: ${ruleData.ruleId}`);
       return true;
     } catch (error) {
       console.error('❌ 新增規則失敗:', error);
