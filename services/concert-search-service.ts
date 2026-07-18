@@ -98,12 +98,9 @@ export class ConcertSearchService {
    */
   async searchConcerts(params: ConcertSearchParams): Promise<ConcertSearchResult[]> {
     try {
-      console.log(`🎵 搜索演唱會: "${params.query}"`);
-      
       // 1. 檢查是否詢問範圍外場地
       const unsupportedVenueMessage = this.checkUnsupportedVenue(params.query);
       if (unsupportedVenueMessage) {
-        console.log(`⚠️ 偵測到範圍外場地查詢: "${params.query}"`);
         return []; // 返回空結果，讓上層處理範圍外回覆
       }
       
@@ -118,8 +115,7 @@ export class ConcertSearchService {
       
       // 5. 限制結果數量
       const limit = params.limit || 5;
-      
-      console.log(`✅ 找到 ${scoredResults.length} 個演唱會結果`);
+
       return scoredResults.slice(0, limit);
       
     } catch (error) {
@@ -593,10 +589,7 @@ export class ConcertSearchService {
    * 格式化演唱會回覆
    */
   async formatConcertReply(results: ConcertSearchResult[], originalQuery: string): Promise<FormattedConcertReply> {
-    console.log(`🎵 格式化演唱會回覆: 找到 ${results.length} 個結果`);
-    
     if (results.length === 0) {
-      console.log(`❌ 沒有找到演唱會結果，查詢: "${originalQuery}"`);
       return {
         message: `很抱歉，我沒有找到與「${originalQuery}」相關的演唱會。\n\n您可以嘗試：\n• 使用更具體的藝人名稱\n• 搜索特定地區（如：台北、高雄）\n• 查詢特定時間（如：這個月、下週）\n\n如需更多協助，請聯繫人工客服！`,
         concerts: [],

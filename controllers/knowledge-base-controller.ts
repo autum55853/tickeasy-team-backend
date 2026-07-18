@@ -260,7 +260,6 @@ export class KnowledgeBaseController {
    */
   static updateEmbeddings = handleErrorAsync(
     async (req: Request, res: Response) => {
-      console.log('🔄 開始批量更新嵌入向量...');
       const result = await knowledgeBaseService.batchUpdateEmbeddings();
 
       res.json({

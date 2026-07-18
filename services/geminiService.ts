@@ -39,7 +39,6 @@ export class GeminiService {
     try {
       this.genAI = new GoogleGenerativeAI(apiKey);
       this.isInitialized = true;
-      console.log('[GeminiService Constructor] Gemini Service 初始化成功。');
     } catch (initError: any) {
       console.error('[GeminiService Constructor] 初始化 Gemini client 失敗:', initError);
       this.isInitialized = false;
@@ -287,20 +286,15 @@ export class GeminiService {
   }
 
   async reviewConcert(concert: Concert, criteria?: ReviewCriteria): Promise<AIReviewResponse> {
-    console.log(`[GeminiService reviewConcert] 開始審核演唱會 ID: ${concert.concertId}`);
     if (!this.isServiceAvailable) {
       console.error(`[GeminiService reviewConcert] Gemini 服務未初始化。演唱會 ID: ${concert.concertId}`);
       return this.getFallbackResponse('Gemini 服務未初始化，API Key 未設定或無效。');
     }
 
     const reviewCriteria = criteria || reviewRulesService.getReviewCriteria();
-    console.log('[GeminiService reviewConcert] 使用的審核標準:', reviewCriteria);
 
     try {
       const prompt = this.buildReviewPrompt(concert, reviewCriteria);
-      console.log(`[GeminiService reviewConcert] 建立的 Prompt (前 100 字元): ${prompt.substring(0, 100)}...`);
-      console.log(`[GeminiService reviewConcert] 準備呼叫 Gemini API。模型: ${GEMINI_MODEL}`);
-
       // 使用 responseMimeType: 'application/json' 確保回傳純 JSON（Gemini 原生支援）
       const model = this.genAI.getGenerativeModel({
         model: GEMINI_MODEL,
@@ -319,11 +313,9 @@ export class GeminiService {
         console.error(`[GeminiService reviewConcert] Gemini API 回應內容為空。演唱會 ID: ${concert.concertId}`);
         return this.getFallbackResponse('Gemini API 回應內容為空');
       }
-      console.log(`[GeminiService reviewConcert] 收到 Gemini API 回應。演唱會 ID: ${concert.concertId}`);
 
       try {
         const aiResult = JSON.parse(responseContent) as Partial<AIReviewResponse>;
-        console.log(`[GeminiService reviewConcert] 成功解析 Gemini JSON 回應。演唱會 ID: ${concert.concertId}`, aiResult);
         return {
           approved: aiResult.approved ?? false,
           confidence: aiResult.confidence ?? 0,
@@ -372,7 +364,6 @@ export class GeminiService {
   }
 
   async testConnection(): Promise<{ success: boolean; message: string; data?: any }> {
-    console.log('[GeminiService testConnection] 開始測試 Gemini API 連線...');
     if (!this.isServiceAvailable) {
       return { success: false, message: 'Gemini Service 未初始化 (API Key 問題)' };
     }
@@ -384,7 +375,6 @@ export class GeminiService {
       const result = await model.generateContent('請僅回覆 "測試成功" 四個字，不要包含其他任何標點或文字。');
       const responseText = result.response.text().trim();
       if (responseText === '測試成功') {
-        console.log('[GeminiService testConnection] Gemini API 連接測試成功！');
         return { success: true, message: 'Gemini API 連接測試成功！' };
       }
       console.warn(`[GeminiService testConnection] Gemini API 測試未達預期回應: ${responseText}`);

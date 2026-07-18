@@ -35,8 +35,7 @@ export async function processConcertBanner(
       
       // 移動圖片
       const newUrl = await imageService.moveImage(tempPath, officialPath, bucket);
-      
-      console.log(`${concertInfo} 的橫幅圖片已移動到正式位置: ${newUrl}`);
+
       return newUrl;
     } catch (error) {
       console.error(`移動 ${concertInfo} 的橫幅圖片失敗:`, error);
@@ -63,7 +62,6 @@ export async function processConcertBanner(
       if (!isValidUrl) {
         throw ApiError.invalidFormat(`${concertInfo} 的橫幅圖片 URL：${imgBanner}`);
       }
-      console.log(`${concertInfo} 的橫幅圖片 URL 驗證通過: ${imgBanner}`);
       return imgBanner;
     } catch (error) {
       console.error(`驗證 ${concertInfo} 的橫幅圖片 URL 失敗:`, error);
@@ -100,8 +98,7 @@ export async function processConcertSeatingTable(
       
       // 移動圖片
       const newUrl = await imageService.moveImage(tempPath, officialPath, bucket);
-      
-      console.log(`${sessionInfo} 的座位表圖片已移動到正式位置: ${newUrl}`);
+
       return newUrl;
     } catch (error) {
       console.error(`移動 ${sessionInfo} 的座位表圖片失敗:`, error);
@@ -128,7 +125,6 @@ export async function processConcertSeatingTable(
       if (!isValidUrl) {
         throw ApiError.invalidFormat(`${sessionInfo} 的座位表圖片 URL：${imgSeattable}`);
       }
-      console.log(`${sessionInfo} 的座位表圖片 URL 驗證通過: ${imgSeattable}`);
       return imgSeattable;
     } catch (error) {
       console.error(`驗證 ${sessionInfo} 的座位表圖片 URL 失敗:`, error);
@@ -162,7 +158,6 @@ export async function updateConcertBanner(
   if (oldImgBanner && !imageService.isTempUrl(oldImgBanner)) {
     try {
       await imageService.deleteImageByUrl(oldImgBanner);
-      console.log(`舊音樂會橫幅已刪除: ${oldImgBanner}`);
     } catch (error) {
       console.warn('刪除舊音樂會橫幅失敗:', error);
       // 不拋出錯誤，因為主要操作是更新

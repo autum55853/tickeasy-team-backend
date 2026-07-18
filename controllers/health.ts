@@ -18,7 +18,6 @@ export const keepAlive = async (req: Request, res: Response, next: NextFunction)
     // 檢查是否需要執行清理（根據環境變數設定的間隔）
     if (now - lastCleanupTime > CLEANUP_INTERVAL) {
       try {
-        console.log(`開始自動清理 ${CLEANUP_HOURS} 小時前的暫存圖片...`);
         const deletedCount = await storageService.cleanupTempImages(CLEANUP_HOURS);
         cleanupResult = {
           executed: true,
@@ -26,7 +25,7 @@ export const keepAlive = async (req: Request, res: Response, next: NextFunction)
           timestamp: new Date().toISOString()
         };
         lastCleanupTime = now;
-        console.log(`自動清理完成，共刪除 ${deletedCount} 個暫存圖片`);
+        console.info(`自動清理完成，共刪除 ${deletedCount} 個暫存圖片`);
       } catch (cleanupError) {
         console.error('自動清理暫存圖片失敗:', cleanupError);
         cleanupResult = {

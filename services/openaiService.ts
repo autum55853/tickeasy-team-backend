@@ -36,12 +36,10 @@ export class OpenAIService {
       console.warn('OPENAI_API_KEY 環境變數未設定，OpenAIService 將無法正常運作。AI 審核功能將停用。');
       this.isInitialized = false;
       this.openai = new OpenAI({ apiKey: 'DUMMY_KEY_DO_NOT_USE_OR_THROW_ERROR' });
-      console.log('[OpenAIService Constructor] OpenAI API Key 未設定。服務未初始化。');
     } else {
       try {
         this.openai = new OpenAI({ apiKey });
         this.isInitialized = true;
-        console.log('[OpenAIService Constructor] OpenAI Service 初始化成功。');
       } catch (initError: any) {
         console.error('[OpenAIService Constructor] 初始化 OpenAI client 失敗:', initError);
         this.isInitialized = false;
@@ -291,20 +289,15 @@ export class OpenAIService {
     concert: Concert,
     criteria?: ReviewCriteria
   ): Promise<AIReviewResponse> {
-    console.log(`[OpenAIService reviewConcert] 開始審核演唱會 ID: ${concert.concertId}`);
     if (!this.isServiceAvailable) {
       console.error(`[OpenAIService reviewConcert] OpenAI 服務未初始化或 API Key 無效。演唱會 ID: ${concert.concertId}`);
       return this.getFallbackResponse('OpenAI 服務未初始化，API Key 未設定或無效。');
     }
 
     const reviewCriteria = criteria || reviewRulesService.getReviewCriteria();
-    console.log('[OpenAIService reviewConcert] 使用的審核標準:', reviewCriteria);
 
     try {
       const prompt = this.buildReviewPrompt(concert, reviewCriteria);
-      console.log(`[OpenAIService reviewConcert] 建立的 Prompt (前 100 字元): ${prompt.substring(0,100)}...`);
-
-      console.log(`[OpenAIService reviewConcert] 準備呼叫 OpenAI API。模型: ${OPENAI_MODEL}, 溫度: ${OPENAI_TEMPERATURE}, Max Tokens: ${OPENAI_MAX_TOKENS}`);
       // [OpenAI] openai.chat.completions.create with response_format: json_object → 已改用 geminiService.reviewConcert（Gemini 用 responseMimeType: 'application/json'）
       const completion = await this.openai.chat.completions.create({
         model: OPENAI_MODEL,
@@ -322,11 +315,9 @@ export class OpenAIService {
         console.error(`[OpenAIService reviewConcert] OpenAI API 回應內容為空。演唱會 ID: ${concert.concertId}, API 回應:`, completion);
         return this.getFallbackResponse('OpenAI API 回應內容為空');
       }
-      console.log(`[OpenAIService reviewConcert] 收到 OpenAI API 回應。演唱會 ID: ${concert.concertId}`);
 
       try {
         const aiResult = JSON.parse(responseContent) as Partial<AIReviewResponse>;
-        console.log(`[OpenAIService reviewConcert] 成功解析 OpenAI JSON 回應。演唱會 ID: ${concert.concertId}`, aiResult);
         return {
           approved: aiResult.approved ?? false,
           confidence: aiResult.confidence ?? 0,
@@ -372,7 +363,6 @@ export class OpenAIService {
 
   // 測試 OpenAI API 連線
   async testConnection(): Promise<{ success: boolean; message: string; data?: any }> {
-    console.log('[OpenAIService testConnection] 開始測試 OpenAI API 連線...');
     if (!this.isServiceAvailable) {
       console.error('[OpenAIService testConnection] OpenAI Service 未初始化 (API Key 問題)，測試無法執行。');
       return { success: false, message: 'OpenAI Service 未初始化 (API Key 問題)' };
@@ -387,7 +377,6 @@ export class OpenAIService {
       });
       const responseText = completion.choices[0]?.message?.content;
       if (responseText === '測試成功') {
-        console.log('[OpenAIService testConnection] OpenAI API 連接測試成功！');
         return { success: true, message: 'OpenAI API 連接測試成功！' };
       }
       console.warn(`[OpenAIService testConnection] OpenAI API 測試未達預期回應: ${responseText}`, completion);

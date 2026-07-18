@@ -12,10 +12,9 @@ import { IsNull } from 'typeorm';
 export async function scheduleConcertFinishJobs() {
   //測試用
   //   schedule.scheduleJob('* * * * *', async () => {
-  //     console.log('每秒執行一次');
   schedule.scheduleJob('10 0 * * *', async () => {
     // 秒 分 時 日 月 星期
-    console.log('每天 00:10 執行一次');
+    console.info('每天 00:10 執行一次');
 
     const concertRepo = AppDataSource.getRepository(Concert);
     const sessionRepo = AppDataSource.getRepository(ConcertSession);
@@ -41,12 +40,12 @@ export async function scheduleConcertFinishJobs() {
       if (allEnded) {
         concert.conInfoStatus = 'finished';
         await concertRepo.save(concert);
-        console.log(
+        console.info(
           `演唱會 ${concert.concertId} 所有場次已結束 → 設為 finished`
         );
       }
     }
   });
 
-  console.log('本次排程處理完畢');
+  console.info('本次排程處理完畢');
 }

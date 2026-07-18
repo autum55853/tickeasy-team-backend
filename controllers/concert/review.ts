@@ -78,21 +78,6 @@ export const submitConcertForReview = handleErrorAsync(
       }
 
       for (const ticket of session.ticketTypes) {
-        /**------除錯用--------
-         *
-         * console.log('[Ticket Debug]', {
-          ticketTypeName: ticket.ticketTypeName,
-          entranceType: ticket.entranceType,
-          ticketBenefits: ticket.ticketBenefits,
-          ticketRefundPolicy: ticket.ticketRefundPolicy,
-          ticketTypePrice: ticket.ticketTypePrice,
-          typeofPrice: typeof ticket.ticketTypePrice,
-          totalQuantity: ticket.totalQuantity,
-          sellBeginDate: ticket.sellBeginDate,
-          sellEndDate: ticket.sellEndDate,
-        });
-         */
-
         // 強制轉型
         ticket.ticketTypePrice = Number(ticket.ticketTypePrice);
         ticket.totalQuantity = Number(ticket.totalQuantity);
@@ -127,7 +112,7 @@ export const submitConcertForReview = handleErrorAsync(
     // 非同步觸發 AI 審核，不影響主流程
     concertReviewService.triggerAIReview(concert.concertId)
       .then((aiReview) => {
-        console.log(`[AI審核] 演唱會 ${concert.concertId} AI審核已完成，狀態：${aiReview.reviewStatus}`);
+        console.info(`[AI審核] 演唱會 ${concert.concertId} AI審核已完成，狀態：${aiReview.reviewStatus}`);
       })
       .catch((err) => {
         console.error(`[AI審核] 演唱會 ${concert.concertId} AI審核失敗：`, err);

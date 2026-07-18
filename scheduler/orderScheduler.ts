@@ -11,10 +11,8 @@ import { getTaiwanTime } from '../utils/date.js';
 export async function scheduleOrderExpiredJobs() {
   //測試用
   //   schedule.scheduleJob('* * * * *', async () => {
-  //     console.log('每秒執行一次');
   schedule.scheduleJob('*/1 * * * *', async () => {
     // 秒 分 時 日 月 星期
-    // console.log('每分鐘 執行一次');
 
   const orderRepo = AppDataSource.getRepository(Order);
   const ticketTypeRepo = AppDataSource.getRepository(TicketTypeEntity);
@@ -32,7 +30,6 @@ export async function scheduleOrderExpiredJobs() {
 
   if (expiredOrders.length === 0) {
     // 沒有逾期訂單，心裡輕鬆一下
-    // console.log(`[${now.toISOString()}] 暫無逾期訂單`);
     return;
   }
 
@@ -49,7 +46,7 @@ export async function scheduleOrderExpiredJobs() {
       'remainingQuantity',
       count
     );
-    console.log(`票種 ${typeId} 還庫存 ${count} 張，影響：${r.affected} 筆`);
+    console.info(`票種 ${typeId} 還庫存 ${count} 張，影響：${r.affected} 筆`);
   }
   // 3. 批次把訂單標成 expired
   await orderRepo
@@ -60,10 +57,10 @@ export async function scheduleOrderExpiredJobs() {
     .andWhere('lockExpireTime < :now', { now })
     .execute();
 
-  console.log(
-    `[${now.toISOString()}] 已處理 ${expiredOrders.length} 筆逾期訂單，並歸還庫存。` 
+  console.info(
+    `[${now.toISOString()}] 已處理 ${expiredOrders.length} 筆逾期訂單，並歸還庫存。`
   );
  });
 
-  console.log('變更訂單狀態排程處理完畢');
+  console.info('變更訂單狀態排程處理完畢');
 }

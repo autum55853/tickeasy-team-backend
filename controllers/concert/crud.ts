@@ -565,7 +565,6 @@ export const softDeleteConcert = handleErrorAsync(
     }
 
     const concertId = req.params.concertId;
-    console.log('要刪除的 concertId:', concertId);
     const concertRepository = AppDataSource.getRepository(Concert);
 
     const concert = await concertRepository.findOne({

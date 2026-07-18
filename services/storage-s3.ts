@@ -206,7 +206,6 @@
 //       const response = await s3Client.send(listCommand);
       
 //       if (!response.Contents || response.Contents.length === 0) {
-//         console.log(`${prefix} 中沒有暫存檔案`);
 //         continue;
 //       }
 
@@ -221,7 +220,6 @@
 //       });
 
 //       if (filesToDelete.length === 0) {
-//         console.log(`${prefix} 中沒有過期的暫存檔案`);
 //         continue;
 //       }
 
@@ -233,7 +231,6 @@
 //         }
 //       }
 
-//       console.log(`已從 ${prefix} 中刪除 ${filesToDelete.length} 個暫存檔案`);
 //     }
 
 //     return totalDeleted;

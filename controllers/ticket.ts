@@ -21,7 +21,7 @@ import { TicketVerificationService } from '../services/ticketVerificationService
 //     if (urlParts.length === 2) {
 //       return urlParts[1];
 //     }
-//   } catch (e) { console.log(e); /* 忽略解析錯誤 */ }
+//   } catch (e) { /* 忽略解析錯誤 */ }
 //   return null;
 // }
 

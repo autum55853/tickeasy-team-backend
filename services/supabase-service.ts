@@ -25,7 +25,6 @@ export class SupabaseService {
         persistSession: false,
       },
     });
-    console.log('✅ Supabase 客戶端初始化成功');
   }
 
   /**
@@ -50,7 +49,6 @@ export class SupabaseService {
         return false;
       }
 
-      console.log('✅ Supabase 連接測試成功');
       return true;
     } catch (error) {
       console.error('❌ Supabase 連接測試失敗:', error);
@@ -131,7 +129,6 @@ export class SupabaseService {
       }).filter(item => item.similarity > 0)
         .sort((a, b) => b.similarity - a.similarity);
 
-      console.log(`🔍 知識庫搜尋完成: "${query}" 找到 ${results.length} 個結果`);
       return results;
 
     } catch (error) {
